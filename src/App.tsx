@@ -4,13 +4,15 @@ import AuthPage from './pages/Auth'
 import Layout from './pages/Layout'
 import { FirebaseProvider } from './hooks/use-firebase'
 import EditPage from './pages/Edit'
+import ExplorePage from './pages/Explore'
 
 function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<EditPage />} />
+        <Route index element={<ExplorePage />} />
         <Route path='/edit/:aid' element={<EditPage />} />
+        <Route path='/explore' element={<ExplorePage />} />
       </Route>
       <Route path='/auth' element={<AuthPage />} />
       {/* fallback */}

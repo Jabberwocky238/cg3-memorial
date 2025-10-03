@@ -1,6 +1,6 @@
 export async function middlewareReadJson<T = any>(request: Request): Promise<T> {
     let jsonData = {} as T
-
+    const urlpath = new URL(request.url).pathname
     const headers = request.headers
     const contentType = headers.get('content-type')
     const isJson = contentType && contentType.includes('application/json')
@@ -18,15 +18,12 @@ export async function middlewareReadJson<T = any>(request: Request): Promise<T> 
     const searchParams = new URLSearchParams(request.url)
     const searchParamsData = Object.fromEntries(searchParams.entries())
     jsonData = { ...jsonData, ...searchParamsData }
+
+    console.log(urlpath, jsonData)
     return jsonData
 }
 
 
-export function getArticleIdFromUrl(request: Request): string | null {
-    const url = new URL(request.url)
-    const match = url.pathname.match(/^\/api\/articles\/(.+)$/)
-    return match ? decodeURIComponent(match[1]) : null
-}
 
 export async function responseJson(data: Record<string, unknown>, init: ResponseInit = {}): Promise<Response> {
     return new Response(JSON.stringify(data), {

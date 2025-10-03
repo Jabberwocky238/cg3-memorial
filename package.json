@@ -10,7 +10,9 @@
 		"lint": "eslint .",
 		"preview": "bun run build && vite preview",
 		"deploy": "bun run build && wrangler deploy",
-		"cf-typegen": "wrangler types"
+		"cf-typegen": "wrangler types",
+		"db:migrate:local": "wrangler d1 migrations apply cg3 --local",
+		"db:migrate:remote": "wrangler d1 migrations apply cg3 --remote"
 	},
 	"dependencies": {
 		"@floating-ui/react": "^0.27.16",

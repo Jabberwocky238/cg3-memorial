@@ -1,6 +1,11 @@
-import type { Articles, Users } from './types'
-
-// 文章表 CRUD（D1）。所有函数首参为 Env，且使用展开传参。
+export interface Articles {
+  aid: string
+  uid: string
+  title: string
+  content: string
+  created_at: string
+  updated_at: string
+}
 
 export async function listArticles(env: Env): Promise<Articles[]> {
   const { results } = await env.DB.prepare(

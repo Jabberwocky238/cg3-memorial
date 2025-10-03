@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
+import { Editor, EditorContent, EditorContext, useEditor } from "@tiptap/react"
 
 // --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit"
@@ -183,14 +183,7 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor() {
-  const isMobile = useIsMobile()
-  const { height } = useWindowSize()
-  const [mobileView, setMobileView] = React.useState<
-    "main" | "highlighter" | "link"
-  >("main")
-  const toolbarRef = React.useRef<HTMLDivElement>(null)
-
+export function createSimpleEditor() {
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
@@ -232,6 +225,17 @@ export function SimpleEditor() {
     content,
   })
 
+  return editor
+}
+
+export function SimpleEditor({ editor }: { editor: Editor }) {
+  const isMobile = useIsMobile()
+  const { height } = useWindowSize()
+  const [mobileView, setMobileView] = React.useState<
+    "main" | "highlighter" | "link"
+  >("main")
+  const toolbarRef = React.useRef<HTMLDivElement>(null)
+  
   const rect = useCursorVisibility({
     editor,
     overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,

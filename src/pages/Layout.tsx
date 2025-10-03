@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/use-theme'
 
 const navItems = [
 	{ label: 'Home', href: '/' },
+	{ label: 'Explore', href: '/explore' },
 ]
 
 function useItemsWithCurrent() {

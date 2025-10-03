@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from 'firebase/firestore/lite';
+import { getDoc, doc, getFirestore, setDoc } from 'firebase/firestore/lite';
 import { onAuthStateChanged, type User } from "firebase/auth"
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
 
@@ -16,12 +16,6 @@ import {
     browserLocalPersistence
 } from 'firebase/auth';
 
-
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
     apiKey: "AIzaSyAaIFNTfCj5TH7iDE3pqwt6yTY7FcIUzs4",
     authDomain: "cg2-b8751.firebaseapp.com",
@@ -64,6 +58,21 @@ interface UserContextType {
     loading: boolean
 }
 
+async function getUserMetaInfo(uid: string): Promise<{
+    displayName: string
+    email: string
+    photoURL: string
+}> {
+    const userDocRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userDocRef);
+    return userDoc.data() as { displayName: string, email: string, photoURL: string };
+}
+
+async function setUserMetaInfo(uid: string, displayName: string, email: string, photoURL: string) {
+    const userDocRef = doc(db, 'users', uid);
+    await setDoc(userDocRef, { displayName, email, photoURL });
+}   
+
 const FirebaseContext = createContext<UserContextType | null>(null)
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
@@ -73,6 +82,9 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (u: User | null) => {
             setUser(u)
+            if (u && u.displayName && u.email && u.photoURL) {
+                setUserMetaInfo(u.uid, u.displayName, u.email, u.photoURL)
+            }
             setLoading(false)
         })
         return unsubscribe
@@ -89,6 +101,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
 
 export function useFirebase() {
     const context = useContext(FirebaseContext)
+
     if (!context) {
         throw new Error('useUser must be used within a UserProvider')
     }
@@ -99,5 +112,8 @@ export function useFirebase() {
         emailSignUp,
         googleSignIn,
         signOut: () => signOut(auth),
+        getUserMetaInfo,
+        setUserMetaInfo,
     }
 }
+

@@ -1,5 +1,11 @@
 import { createArticle, deleteArticle, getArticleById, listArticles, updateArticle } from './db'
-import { middlewareReadJson, responseJson, getArticleIdFromUrl } from './utils'
+import { middlewareReadJson, responseJson } from './utils'
+
+function _parseArticleIdFromUrl(request: Request): string | null {
+  const url = new URL(request.url)
+  const match = url.pathname.match(/^\/api\/articles\/(.+)$/)
+  return match ? decodeURIComponent(match[1]) : null
+}
 
 export async function handleListArticles(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
   const items = await listArticles(env)
@@ -16,7 +22,7 @@ export async function handleCreateArticle(request: Request, env: Env, context: E
 }
 
 export async function handleGetArticle(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
-  const aid = getArticleIdFromUrl(request)
+  const aid = _parseArticleIdFromUrl(request)
   if (!aid) return await responseJson({ error: 'Bad Request' }, { status: 400 })
   const item = await getArticleById(env, aid)
   if (!item) return await responseJson({ error: 'Not Found' }, { status: 404 })
@@ -24,7 +30,7 @@ export async function handleGetArticle(request: Request, env: Env, context: Exec
 }
 
 export async function handleUpdateArticle(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
-  const aid = getArticleIdFromUrl(request)
+  const aid = _parseArticleIdFromUrl(request)
   if (!aid) return await responseJson({ error: 'Bad Request' }, { status: 400 })
   const body = await middlewareReadJson<{ title?: string; content?: string }>(request)
   if (body.title === undefined && body.content === undefined) {
@@ -36,7 +42,7 @@ export async function handleUpdateArticle(request: Request, env: Env, context: E
 }
 
 export async function handleDeleteArticle(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
-  const aid = getArticleIdFromUrl(request)
+  const aid = _parseArticleIdFromUrl(request)
   if (!aid) return await responseJson({ error: 'Bad Request' }, { status: 400 })
   const ok = await deleteArticle(env, aid)
   if (!ok) return await responseJson({ error: 'Not Found' }, { status: 404 })
