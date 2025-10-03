@@ -51,7 +51,7 @@ export default function Layout() {
 			<main className="flex-1">
 				<Outlet />
 			</main>
-			<footer className="p-4 text-center text-xs text-zinc-500">
+			<footer className="p-4 text-center text-xs">
 				<Link to="/auth" className="underline">Auth</Link>
 			</footer>
 		</div>

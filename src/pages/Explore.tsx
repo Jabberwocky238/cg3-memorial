@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApi, type Article } from '@/hooks/use-backend';
 import { useFirebase } from '@/hooks/use-firebase';
+import { useNavigate } from 'react-router-dom';
 
 interface ArticleWithUser extends Article {
   userInfo?: {
@@ -15,13 +16,14 @@ export default function Explore() {
   const [articles, setArticles] = useState<ArticleWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const { listArticles } = useApi();
+  const navigate = useNavigate();
+  
   useEffect(() => {
     const loadArticles = async () => {
       try {
         setLoading(true);
-        const api = await useApi();
-        const result = await api.listArticles();
+        const result = await listArticles();
 
         if (result.error) {
           setError(result.error);
@@ -95,7 +97,7 @@ export default function Explore() {
         <div className="space-y-6">
           {articles.map((article) => (
             <ArticleItem key={article.aid} article={article} onClick={() => {
-              alert(`/edit/${article.aid}`);
+              navigate(`/article/${article.aid}`);
             }} />
           ))}
         </div>

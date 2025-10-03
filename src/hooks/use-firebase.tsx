@@ -58,14 +58,16 @@ interface UserContextType {
     loading: boolean
 }
 
-async function getUserMetaInfo(uid: string): Promise<{
+export interface UserMetaInfo {
     displayName: string
     email: string
     photoURL: string
-}> {
+}
+
+async function getUserMetaInfo(uid: string): Promise<UserMetaInfo> {
     const userDocRef = doc(db, 'users', uid);
     const userDoc = await getDoc(userDocRef);
-    return userDoc.data() as { displayName: string, email: string, photoURL: string };
+    return userDoc.data() as UserMetaInfo;
 }
 
 async function setUserMetaInfo(uid: string, displayName: string, email: string, photoURL: string) {

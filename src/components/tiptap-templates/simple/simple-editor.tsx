@@ -183,10 +183,11 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function createSimpleEditor() {
+export function createSimpleEditor(modifiable: boolean = true) {
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
+    editable: modifiable,
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -228,14 +229,14 @@ export function createSimpleEditor() {
   return editor
 }
 
-export function SimpleEditor({ editor }: { editor: Editor }) {
+export function SimpleEditor({ editor, modifiable = true }: { editor: Editor, modifiable: boolean }) {
   const isMobile = useIsMobile()
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = React.useState<
     "main" | "highlighter" | "link"
   >("main")
   const toolbarRef = React.useRef<HTMLDivElement>(null)
-  
+
   const rect = useCursorVisibility({
     editor,
     overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
@@ -250,13 +251,13 @@ export function SimpleEditor({ editor }: { editor: Editor }) {
   return (
     <div className="simple-editor-wrapper">
       <EditorContext.Provider value={{ editor }}>
-        <Toolbar
+        {modifiable && <Toolbar
           ref={toolbarRef}
           style={{
             ...(isMobile
               ? {
-                  bottom: `calc(100% - ${height - rect.y}px)`,
-                }
+                bottom: `calc(100% - ${height - rect.y}px)`,
+              }
               : {}),
           }}
         >
@@ -272,7 +273,7 @@ export function SimpleEditor({ editor }: { editor: Editor }) {
               onBack={() => setMobileView("main")}
             />
           )}
-        </Toolbar>
+        </Toolbar>}
 
         <EditorContent
           editor={editor}
