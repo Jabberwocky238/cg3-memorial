@@ -2,6 +2,8 @@
 
 这是一个文章发表论坛
 
+任何部分的代码，用户没有明显说明时，不允许添加测试组件，不允许使用mock数据，不允许写使用文档。
+
 # 前端逻辑
 
 pnpm管理器，firebase认证系统，untitledUI组件库，react router dom导航，tailwindcss

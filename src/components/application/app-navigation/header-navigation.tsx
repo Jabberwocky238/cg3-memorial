@@ -1,4 +1,4 @@
-import type { FC, ReactNode } from "react";
+import type { FC, MouseEventHandler, ReactNode } from "react";
 import { Bell01, LifeBuoy01, PlusSquare, SearchLg, Settings01 } from "@untitledui/icons";
 import { Button as AriaButton, DialogTrigger, Popover } from "react-aria-components";
 import { Avatar } from "../../base/avatar/avatar";
@@ -14,6 +14,9 @@ import { NavList } from "./base-components/nav-list";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/base/buttons/button";
 import type { User } from "firebase/auth";
+import { useTheme } from "@/hooks/use-theme";
+import { MoonStarIcon } from "@/components/tiptap-icons/moon-star-icon";
+import { SunIcon } from "@/components/tiptap-icons/sun-icon";
 
 type NavItem = {
     /** Label text for the nav item. */
@@ -30,6 +33,15 @@ type NavItem = {
     items?: NavItem[];
 };
 
+type ActionItem = {
+    size?: "md" | "lg";
+    icon?: FC<{ className?: string }>;
+    label: string;
+    href?: string;
+    onClick?: MouseEventHandler;
+    tooltipPlacement?: "top" | "right" | "bottom" | "left";
+};
+
 interface HeaderNavigationBaseProps {
     /** URL of the currently active item. */
     activeUrl?: string;
@@ -37,6 +49,8 @@ interface HeaderNavigationBaseProps {
     items: NavItem[];
     /** List of sub-items to display. */
     subItems?: NavItem[];
+    /** List of action items to display. */
+    actionItems?: ActionItem[];
     /** Content to display in the trailing position. */
     trailingContent?: ReactNode;
     /** Whether to show the avatar dropdown. */
@@ -51,13 +65,14 @@ export const HeaderNavigationBase = ({
     activeUrl,
     items,
     subItems,
+    actionItems,
     trailingContent,
     showAvatarDropdown = true,
     hideBorder = false,
     user,
 }: HeaderNavigationBaseProps) => {
     const activeSubNavItems = subItems || items.find((item) => item.current && item.items && item.items.length > 0)?.items;
-
+    const { theme, setTheme } = useTheme()
     const showSecondaryNav = activeSubNavItems && activeSubNavItems.length > 0;
 
     return (
@@ -73,7 +88,17 @@ export const HeaderNavigationBase = ({
 
                     <div className="mt-auto flex flex-col gap-4 px-2 py-4 lg:px-4 lg:py-6">
                         <div className="flex flex-col gap-1">
-                            <NavItemBase type="link" href="#" icon={LifeBuoy01}>
+                            {actionItems?.map((item) => (
+                                <NavItemBase type="link" href={item.href} icon={item.icon} current={item.href === activeUrl}>
+                                    {item.label}
+                                </NavItemBase>
+                            ))}
+                            <NavItemBase type="link" href="#" icon={theme === "light" ? SunIcon : MoonStarIcon} onClick={() => {
+                                setTheme(theme === "light" ? "dark" : "light")
+                            }}>
+                                Toggle Theme
+                            </NavItemBase>
+                            {/* <NavItemBase type="link" href="#" icon={LifeBuoy01}>
                                 Support
                             </NavItemBase>
                             <NavItemBase
@@ -90,7 +115,7 @@ export const HeaderNavigationBase = ({
                             </NavItemBase>
                             <NavItemBase type="link" href="https://www.untitledui.com/" icon={Settings01}>
                                 Open in browser
-                            </NavItemBase>
+                            </NavItemBase> */}
                         </div>
 
                         <NavAccountCard items={user ? [user] : []} selectedAccountId={user?.uid} />
@@ -132,29 +157,28 @@ export const HeaderNavigationBase = ({
                             {trailingContent}
 
                             <div className="flex gap-0.5">
+                                {actionItems?.map((item) => (
+                                    <NavItemButton
+                                        key={item.label}
+                                        current={item.href === activeUrl}
+                                        size={item.size}
+                                        icon={item.icon ?? PlusSquare}
+                                        label={item.label}
+                                        href={item.href}
+                                        tooltipPlacement={item.tooltipPlacement}
+                                        onClick={item.onClick}
+                                    />
+                                ))}
                                 <NavItemButton
-                                    current={activeUrl === "/edit/new"}
+                                    current={theme === "light"}
                                     size="md"
-                                    icon={PlusSquare}
-                                    label="New"
-                                    href="/edit/new"
+                                    icon={theme === "light" ? SunIcon : MoonStarIcon}
+                                    label={"Toggle Theme"}
+                                    href="#"
                                     tooltipPlacement="bottom"
-                                />
-                                <NavItemButton
-                                    current={activeUrl === "/settings-01"}
-                                    size="md"
-                                    icon={Settings01}
-                                    label="Settings"
-                                    href="/settings-01"
-                                    tooltipPlacement="bottom"
-                                />
-                                <NavItemButton
-                                    current={activeUrl === "/notifications-01"}
-                                    size="md"
-                                    icon={Bell01}
-                                    label="Notifications"
-                                    href="/notifications-01"
-                                    tooltipPlacement="bottom"
+                                    onClick={() => {
+                                        setTheme(theme === "light" ? "dark" : "light")
+                                    }}
                                 />
                             </div>
 
@@ -214,6 +238,7 @@ export const HeaderNavigationBase = ({
                                             </NavItemBase>
                                         </li>
                                     ))}
+
                                 </ul>
                             </nav>
 
