@@ -1,8 +1,8 @@
 import { type HTMLAttributes, type ReactNode } from "react";
-import { HintText } from "./base/input/hint-text";
-import type { InputBaseProps } from "./base/input/input";
-import { TextField } from "./base/input/input";
-import { Label } from "./base/input/label";
+import { HintText } from "@@/base/input/hint-text";
+import type { InputBaseProps } from "@@/base/input/input";
+import { TextField } from "@@/base/input/input";
+import { Label } from "@@/base/input/label";
 import { cx, sortCx } from "@/utils/cx";
 
 interface InputPrefixProps extends HTMLAttributes<HTMLDivElement> {
@@ -76,7 +76,7 @@ export const InputGroup = ({ size = "sm", prefix, leadingAddon, trailingAddon, l
         <TextField
             size={size}
             aria-label={label || undefined}
-            inputClassName={cx(paddings[size].input)}
+            inputClassName={cx(paddings[size as keyof typeof paddings].input)}
             tooltipClassName={cx(hasTrailing && !hasLeading && "group-has-[&>select]:right-0")}
             wrapperClassName={cx(
                 "z-10",
@@ -109,7 +109,7 @@ export const InputGroup = ({ size = "sm", prefix, leadingAddon, trailingAddon, l
                         {leadingAddon && <section data-leading={hasLeading || undefined}>{leadingAddon}</section>}
 
                         {prefix && (
-                            <span className={cx("my-auto grow pr-2", paddings[size].leadingText)}>
+                            <span className={cx("my-auto grow pr-2", paddings[size as keyof typeof paddings].leadingText)}>
                                 <p className={cx("text-md text-tertiary", isDisabled && "text-disabled")}>{prefix}</p>
                             </span>
                         )}
