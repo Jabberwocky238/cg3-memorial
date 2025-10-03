@@ -11,6 +11,9 @@ import { NavAccountCard, NavAccountMenu } from "./base-components/nav-account-ca
 import { NavItemBase } from "./base-components/nav-item";
 import { NavItemButton } from "./base-components/nav-item-button";
 import { NavList } from "./base-components/nav-list";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/base/buttons/button";
+import type { User } from "firebase/auth";
 
 type NavItem = {
     /** Label text for the nav item. */
@@ -40,6 +43,8 @@ interface HeaderNavigationBaseProps {
     showAvatarDropdown?: boolean;
     /** Whether to hide the bottom border. */
     hideBorder?: boolean;
+    /** External user info to control avatar/login UI. */
+    user?: User | null;
 }
 
 export const HeaderNavigationBase = ({
@@ -49,6 +54,7 @@ export const HeaderNavigationBase = ({
     trailingContent,
     showAvatarDropdown = true,
     hideBorder = false,
+    user,
 }: HeaderNavigationBaseProps) => {
     const activeSubNavItems = subItems || items.find((item) => item.current && item.items && item.items.length > 0)?.items;
 
@@ -86,8 +92,8 @@ export const HeaderNavigationBase = ({
                                 Open in browser
                             </NavItemBase>
                         </div>
-
-                        <NavAccountCard />
+                        
+                        <NavAccountCard items={user ? [user] : []} selectedAccountId={user?.uid} />
                     </div>
                 </aside>
             </MobileNavigationHeader>
@@ -145,33 +151,44 @@ export const HeaderNavigationBase = ({
                             </div>
 
                             {showAvatarDropdown && (
-                                <DialogTrigger>
-                                    <AriaButton
-                                        className={({ isPressed, isFocused }) =>
-                                            cx(
-                                                "group relative inline-flex cursor-pointer",
-                                                (isPressed || isFocused) && "rounded-full outline-2 outline-offset-2 outline-focus-ring",
-                                            )
-                                        }
-                                    >
-                                        <Avatar alt="Olivia Rhye" src="https://www.untitledui.com/images/avatars/olivia-rhye?bg=%23E0E0E0" size="md" />
-                                    </AriaButton>
-                                    <Popover
-                                        placement="bottom right"
-                                        offset={8}
-                                        className={({ isEntering, isExiting }) =>
-                                            cx(
-                                                "will-change-transform",
-                                                isEntering &&
+                                user ? (
+                                    <DialogTrigger>
+                                        <AriaButton
+                                            className={({ isPressed, isFocused }) =>
+                                                cx(
+                                                    "group relative inline-flex cursor-pointer",
+                                                    (isPressed || isFocused) && "rounded-full outline-2 outline-offset-2 outline-focus-ring",
+                                                )
+                                            }
+                                        >
+                                            <Avatar alt={user.displayName ?? user.email ?? "User"} src={user.photoURL ?? undefined} size="md" />
+                                        </AriaButton>
+                                        <Popover
+                                            placement="bottom right"
+                                            offset={8}
+                                            className={({ isEntering, isExiting }) =>
+                                                cx(
+                                                    "will-change-transform",
+                                                    isEntering &&
                                                     "duration-300 ease-out animate-in fade-in placement-right:slide-in-from-left-2 placement-top:slide-in-from-bottom-2 placement-bottom:slide-in-from-top-2",
-                                                isExiting &&
+                                                    isExiting &&
                                                     "duration-150 ease-in animate-out fade-out placement-right:slide-out-to-left-2 placement-top:slide-out-to-bottom-2 placement-bottom:slide-out-to-top-2",
-                                            )
-                                        }
-                                    >
-                                        <NavAccountMenu />
-                                    </Popover>
-                                </DialogTrigger>
+                                                )
+                                            }
+                                        >
+                                            <NavAccountMenu />
+                                        </Popover>
+                                    </DialogTrigger>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <Link to="/auth#login">
+                                            <Button size="sm">Login</Button>
+                                        </Link>
+                                        <Link to="/auth#signup">
+                                            <Button size="sm" color="secondary">Sign up</Button>
+                                        </Link>
+                                    </div>
+                                )
                             )}
                         </div>
                     </div>

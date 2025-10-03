@@ -4,6 +4,7 @@
     "": {
       "name": "cg3",
       "dependencies": {
+        "@react-stately/utils": "^3.10.8",
         "@tailwindcss/typography": "^0.5.19",
         "@tailwindcss/vite": "^4.1.14",
         "@untitledui/icons": "^0.0.19",

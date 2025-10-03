@@ -1,6 +1,5 @@
 export interface Users {
     uid: string
-    username: string
     created_at: string
 }
 

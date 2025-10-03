@@ -1,4 +1,4 @@
-import type { Articles } from './types'
+import type { Articles, Users } from './types'
 
 // 文章表 CRUD（D1）。所有函数首参为 Env，且使用展开传参。
 
@@ -63,5 +63,4 @@ export async function deleteArticle(env: Env, aid: string): Promise<boolean> {
   ).bind(aid).run()
   return (info.meta.changes ?? 0) > 0
 }
-
 

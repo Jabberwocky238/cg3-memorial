@@ -3,7 +3,7 @@ import {
   handleCreateArticle,
   handleGetArticle,
   handleUpdateArticle,
-  handleDeleteArticle
+  handleDeleteArticle,
 } from './handler'
 
 type Route = [
@@ -28,6 +28,7 @@ export default {
     routes.push([handleGetArticle, '/api/articles/', 'GET'])
     routes.push([handleUpdateArticle, '/api/articles/', 'PUT'])
     routes.push([handleDeleteArticle, '/api/articles/', 'DELETE'])
+
     // 兜底
     routes.push([handleHelloWorld, '/', 'GET']) 
     const route = routes.find((route) => route[2] === method && url.pathname.startsWith(route[1]));

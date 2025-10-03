@@ -42,5 +42,3 @@ export async function handleDeleteArticle(request: Request, env: Env, context: E
   if (!ok) return await responseJson({ error: 'Not Found' }, { status: 404 })
   return new Response(null, { status: 204 })
 }
-
-
