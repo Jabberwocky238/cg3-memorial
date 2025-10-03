@@ -1,13 +1,19 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore/lite';
-import { getAuth, GoogleAuthProvider, type UserCredential } from 'firebase/auth';
 import { getAnalytics } from "firebase/analytics";
-import { 
-    signInWithEmailAndPassword, 
+import { getFirestore } from 'firebase/firestore/lite';
+import {
+    getAuth,
+    signInWithEmailAndPassword,
     signInWithPopup,
     createUserWithEmailAndPassword,
-    signOut
-} from "firebase/auth";
+    signOut,
+    GoogleAuthProvider,
+    type UserCredential,
+    setPersistence,
+    browserLocalPersistence
+} from 'firebase/auth';
+
+
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -31,16 +37,19 @@ const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
 async function emailSignIn(email: string, password: string) {
+    await setPersistence(auth, browserLocalPersistence);
     const result: UserCredential = await signInWithEmailAndPassword(auth, email, password);
     return { user: result.user };
 }
 
 async function emailSignUp(email: string, password: string) {
+    await setPersistence(auth, browserLocalPersistence);
     const result: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
     return { user: result.user };
 }
 
 async function googleSignIn() {
+    await setPersistence(auth, browserLocalPersistence);
     const result: UserCredential = await signInWithPopup(auth, googleProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     return { user: result.user, credential };
