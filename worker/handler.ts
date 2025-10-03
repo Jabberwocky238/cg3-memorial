@@ -9,6 +9,7 @@ function _parseArticleIdFromUrl(request: Request): string | null {
 
 export async function handleListArticles(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
   const items = await listArticles(env)
+  console.log('items', typeof items)
   return await responseJson({ data: items })
 }
 
@@ -26,6 +27,7 @@ export async function handleGetArticle(request: Request, env: Env, context: Exec
   if (!aid) return await responseJson({ error: 'Bad Request' }, { status: 400 })
   const item = await getArticleById(env, aid)
   if (!item) return await responseJson({ error: 'Not Found' }, { status: 404 })
+  console.log('item', typeof item)
   return await responseJson({ data: item })
 }
 

@@ -22,6 +22,9 @@ export async function getArticleById(env: Env, aid: string): Promise<Articles | 
      FROM articles
      WHERE aid = ?`
   ).bind(aid).first<Articles>()
+  if (Array.isArray(row)) {
+    return row[0] ?? null
+  }
   return row ?? null
 }
 

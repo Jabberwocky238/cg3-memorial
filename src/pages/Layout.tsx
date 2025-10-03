@@ -21,7 +21,7 @@ const actions = [
 	{
 		href: "/edit/new",
 		icon: PlusSquare,
-		label: "New",
+		label: "New Article",
 		tooltipPlacement: "bottom" as const
 	},
 	{

@@ -23,11 +23,11 @@ export default {
 
     const routes: Route[] = []
     // 文章 APIs
-    routes.push([handleListArticles, '/api/articles', 'GET'])
-    routes.push([handleCreateArticle, '/api/articles', 'POST'])
     routes.push([handleGetArticle, '/api/articles/', 'GET'])
     routes.push([handleUpdateArticle, '/api/articles/', 'PUT'])
     routes.push([handleDeleteArticle, '/api/articles/', 'DELETE'])
+    routes.push([handleListArticles, '/api/articles', 'GET'])
+    routes.push([handleCreateArticle, '/api/articles', 'POST'])
 
     // 兜底
     routes.push([handleHelloWorld, '/', 'GET']) 

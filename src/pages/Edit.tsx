@@ -69,7 +69,7 @@ function EditPage() {
                     Publish
                 </ButtonGroupItem>
             </ButtonGroup>
-            {editor && <SimpleEditor editor={editor} />}
+            {editor && <SimpleEditor editor={editor} modifiable />}
         </div>
     )
 }

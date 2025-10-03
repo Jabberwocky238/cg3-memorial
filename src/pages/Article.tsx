@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApi, type Article } from '@/hooks/use-backend';
 import { useFirebase, type UserMetaInfo } from '@/hooks/use-firebase';
 import { createSimpleEditor, SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
-import type { User } from '@firebase/auth';
 
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
@@ -35,12 +34,14 @@ export default function Article() {
 
                 if (result.data) {
                     // 获取用户信息
+                    console.log('result.data', result.data);
                     try {
                         const userInfo = await getUserMetaInfo(result.data.uid);
-                        console.log('userInfo', userInfo);
+                        // console.log('userInfo', userInfo);
                         setAuthor(userInfo);
                         setArticle(result.data);
-                        editor?.commands.setContent(result.data.content);
+                        const content = JSON.parse(result.data.content);
+                        editor?.commands.setContent(content);
                     } catch (err) {
                         console.error('获取用户信息失败:', err);
                         setAuthor(null);
