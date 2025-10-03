@@ -1,0 +1,24 @@
+# 项目介绍
+
+这是一个文章发表论坛
+
+# 前端逻辑
+
+pnpm管理器，firebase认证系统，untitledUI组件库，react router dom导航，tailwindcss
+
+contexts/ 是hooks和providers
+
+components/ 是所有无状态组件，状态由外部传入
+
+pages/ 是所有页面组件，管理状态
+
+# 后端逻辑
+
+在db.s文件里写数据库交互，在handler.ts里写请求处理, types.ts里写数据库类型
+
+## db.ts
+
+所有在worker/db.ts里的函数，传参时使用展开传参，而不是把参数包括在一个对象里。
+其内部每一个函数的第一个参数必定是Env类型，用于和D1Database交互。
+
+

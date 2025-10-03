@@ -12,12 +12,25 @@
 		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
+		"@tailwindcss/typography": "^0.5.19",
+		"@tailwindcss/vite": "^4.1.14",
+		"@untitledui/icons": "^0.0.19",
+		"firebase": "^12.3.0",
+		"firebaseui": "^6.1.0",
 		"react": "^19.1.1",
-		"react-dom": "^19.1.1"
+		"react-aria": "^3.42.0",
+		"react-aria-components": "^1.12.0",
+		"react-dom": "^19.1.1",
+		"react-router-dom": "^7.9.3",
+		"tailwind-merge": "^3.3.1",
+		"tailwindcss": "^4.1.14",
+		"tailwindcss-animate": "^1.0.7",
+		"tailwindcss-react-aria-components": "^2.0.1"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.13.9",
 		"@eslint/js": "^9.33.0",
+		"@tailwindcss/postcss": "^4.1.14",
 		"@types/react": "^19.1.10",
 		"@types/react-dom": "^19.1.7",
 		"@vitejs/plugin-react-swc": "^4.0.0",
@@ -25,6 +38,7 @@
 		"eslint-plugin-react-hooks": "^5.2.0",
 		"eslint-plugin-react-refresh": "^0.4.20",
 		"globals": "^16.3.0",
+		"postcss": "^8.5.6",
 		"typescript": "~5.8.3",
 		"typescript-eslint": "^8.39.1",
 		"vite": "^7.1.2",
