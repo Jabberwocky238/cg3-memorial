@@ -11,6 +11,7 @@ import { RadioButtonBase } from "../../../base/radio-buttons/radio-buttons";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { cx } from "@/utils/cx";
 import type { User } from "firebase/auth";
+import { useFirebase } from "@/hooks/use-firebase";
 
 export const NavAccountMenu = ({
     className,
@@ -20,6 +21,7 @@ export const NavAccountMenu = ({
 }: AriaDialogProps & { className?: string; items?: User[]; selectedAccountId?: string }) => {
     const focusManager = useFocusManager();
     const dialogRef = useRef<HTMLDivElement>(null);
+    const { signOut } = useFirebase();
 
     const onKeyDown = useCallback(
         (e: KeyboardEvent) => {
@@ -87,7 +89,9 @@ export const NavAccountMenu = ({
             </div>
 
             <div className="pt-1 pb-1.5">
-                <NavAccountCardMenuItem label="Sign out" icon={LogOut01} shortcut="⌥⇧Q" />
+                <NavAccountCardMenuItem label="Sign out" onClick={() => {
+                    signOut()
+                }} icon={LogOut01} shortcut="⌥⇧Q" />
             </div>
         </AriaDialog>
     );
@@ -151,13 +155,10 @@ export const NavAccountCard = ({
         );
     }
 
-
     if (!selectedAccount) {
         console.warn(`Account with ID ${selectedAccountId} not found in <NavAccountCard />`);
         return null;
     }
-
-    console.log(selectedAccount, items);
 
     return (
         <div ref={triggerRef} className="relative flex items-center gap-3 rounded-xl p-3 ring-1 ring-secondary ring-inset">

@@ -6,22 +6,26 @@ export const useTheme = () => {
   useEffect(() => {
     // 获取系统偏好主题
     const getSystemTheme = (): 'light' | 'dark' => {
+      // 用户设置的偏好主题
+      const preferThemeLocalStorage = localStorage.getItem('theme');
+      if (preferThemeLocalStorage) {
+        return preferThemeLocalStorage as 'light' | 'dark';
+      }
+
+      // 系统偏好主题
       const initialDarkMode =
-      !!document.querySelector('meta[name="color-scheme"][content="dark"]') ||
-      window.matchMedia("(prefers-color-scheme: dark)").matches;
+        !!document.querySelector('meta[name="color-scheme"][content="dark"]') ||
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
       return initialDarkMode ? 'dark' : 'light';
     };
 
     // 初始化主题
     const initialTheme = getSystemTheme();
-    setTheme(initialTheme);
+    applyTheme(initialTheme);
 
     // 监听系统主题变化
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      const newTheme = e.matches ? 'dark' : 'light';
-      setTheme(newTheme);
-    };
+    const handleChange = (e: MediaQueryListEvent) => applyTheme(e.matches ? 'dark' : 'light')
 
     mediaQuery.addEventListener('change', handleChange);
     // 清理函数
@@ -29,17 +33,15 @@ export const useTheme = () => {
   }, []);
 
   const applyTheme = (theme: 'light' | 'dark') => {
-    // 设置 data-theme 属性到 document.documentElement
-    document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.classList.toggle('dark', theme === 'dark');
     setTheme(theme);
-    
     // 控制 body 上的 darkmode 类
     if (theme === 'dark') {
       document.body.classList.add('dark-mode');
     } else {
       document.body.classList.remove('dark-mode');
     }
+    localStorage.setItem('theme', theme);
   };
 
   return { theme, setTheme: applyTheme };

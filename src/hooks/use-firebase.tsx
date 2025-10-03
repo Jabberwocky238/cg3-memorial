@@ -98,5 +98,6 @@ export function useFirebase() {
         emailSignIn,
         emailSignUp,
         googleSignIn,
+        signOut: () => signOut(auth),
     }
 }
