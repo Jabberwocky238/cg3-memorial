@@ -1,6 +1,9 @@
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from 'firebase/firestore/lite';
+import { onAuthStateChanged, type User } from "firebase/auth"
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
+
 import {
     getAuth,
     signInWithEmailAndPassword,
@@ -55,10 +58,43 @@ async function googleSignIn() {
     return { user: result.user, credential };
 }
 
+
+interface UserContextType {
+    user: User | null
+    loading: boolean
+}
+
+const FirebaseContext = createContext<UserContextType | null>(null)
+
+export function FirebaseProvider({ children }: { children: React.ReactNode }) {
+    const [user, setUser] = useState<User | null>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (u: User | null) => {
+            setUser(u)
+            setLoading(false)
+        })
+        return unsubscribe
+    }, [auth])
+
+    const value = useMemo<UserContextType>(() => ({ user, loading }), [user, loading])
+
+    return (
+        <FirebaseContext.Provider value={value}>
+            {children}
+        </FirebaseContext.Provider>
+    )
+}
+
 export function useFirebase() {
+    const context = useContext(FirebaseContext)
+    if (!context) {
+        throw new Error('useUser must be used within a UserProvider')
+    }
     return {
         auth,
-        user: auth.currentUser,
+        user: context.user,
         emailSignIn,
         emailSignUp,
         googleSignIn,

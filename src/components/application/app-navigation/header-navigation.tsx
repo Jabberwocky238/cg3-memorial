@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from "react";
-import { Bell01, LifeBuoy01, SearchLg, Settings01 } from "@untitledui/icons";
+import { Bell01, LifeBuoy01, PlusSquare, SearchLg, Settings01 } from "@untitledui/icons";
 import { Button as AriaButton, DialogTrigger, Popover } from "react-aria-components";
 import { Avatar } from "../../base/avatar/avatar";
 import { BadgeWithDot } from "../../base/badges/badges";
@@ -92,7 +92,7 @@ export const HeaderNavigationBase = ({
                                 Open in browser
                             </NavItemBase>
                         </div>
-                        
+
                         <NavAccountCard items={user ? [user] : []} selectedAccountId={user?.uid} />
                     </div>
                 </aside>
@@ -132,6 +132,14 @@ export const HeaderNavigationBase = ({
                             {trailingContent}
 
                             <div className="flex gap-0.5">
+                                <NavItemButton
+                                    current={activeUrl === "/edit/new"}
+                                    size="md"
+                                    icon={PlusSquare}
+                                    label="New"
+                                    href="/edit/new"
+                                    tooltipPlacement="bottom"
+                                />
                                 <NavItemButton
                                     current={activeUrl === "/settings-01"}
                                     size="md"
@@ -176,7 +184,7 @@ export const HeaderNavigationBase = ({
                                                 )
                                             }
                                         >
-                                            <NavAccountMenu />
+                                            <NavAccountMenu items={user ? [user] : []} selectedAccountId={user?.uid} />
                                         </Popover>
                                     </DialogTrigger>
                                 ) : (
