@@ -8,10 +8,11 @@ import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialog
 import { AvatarLabelGroup } from "../../../base/avatar/avatar-label-group";
 import { Button } from "../../../base/buttons/button";
 import { RadioButtonBase } from "../../../base/radio-buttons/radio-buttons";
-import { useBreakpoint } from "@/hooks/use-breakpoint";
+import { useBreakpoint } from "@/hooks/tiptap/use-breakpoint";
 import { cx } from "@/utils/cx";
 import type { User } from "firebase/auth";
 import { useFirebase } from "@/hooks/use-firebase";
+import { useNavigate } from "react-router-dom";
 
 export const NavAccountMenu = ({
     className,
@@ -22,6 +23,7 @@ export const NavAccountMenu = ({
     const focusManager = useFocusManager();
     const dialogRef = useRef<HTMLDivElement>(null);
     const { signOut } = useFirebase();
+    const navigate = useNavigate();
 
     const onKeyDown = useCallback(
         (e: KeyboardEvent) => {
@@ -58,8 +60,12 @@ export const NavAccountMenu = ({
         >
             <div className="rounded-xl bg-primary ring-1 ring-secondary">
                 <div className="flex flex-col gap-0.5 py-1.5">
-                    <NavAccountCardMenuItem label="View profile" icon={User01} shortcut="⌘K->P" />
-                    <NavAccountCardMenuItem label="Account settings" icon={Settings01} shortcut="⌘S" />
+                    <NavAccountCardMenuItem label="View profile" onClick={(e) => {
+                        navigate("/profile")
+                    }} icon={User01} shortcut="⌘K->P" />
+                    <NavAccountCardMenuItem label="Account settings" onClick={(e) => {
+                        navigate("/profile")
+                    }} icon={Settings01} shortcut="⌘S" />
                     <NavAccountCardMenuItem label="Documentation" icon={BookOpen01} />
                 </div>
                 <div className="flex flex-col gap-0.5 border-t border-secondary py-1.5">
@@ -75,7 +81,6 @@ export const NavAccountMenu = ({
                                 )}
                             >
                                 <AvatarLabelGroup status="online" size="md" src={account.photoURL} title={account.displayName} subtitle={account.email} />
-
                                 <RadioButtonBase isSelected={account.uid === selectedAccountId} className="absolute top-2 right-2" />
                             </button>
                         ))}
@@ -89,9 +94,7 @@ export const NavAccountMenu = ({
             </div>
 
             <div className="pt-1 pb-1.5">
-                <NavAccountCardMenuItem label="Sign out" onClick={() => {
-                    signOut()
-                }} icon={LogOut01} shortcut="⌥⇧Q" />
+                <NavAccountCardMenuItem label="Sign out" onClick={signOut} icon={LogOut01} shortcut="⌥⇧Q" />
             </div>
         </AriaDialog>
     );

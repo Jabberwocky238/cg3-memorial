@@ -6,6 +6,8 @@ import { FirebaseProvider } from './hooks/use-firebase'
 import EditPage from './pages/Edit'
 import ExplorePage from './pages/Explore'
 import ArticlePage from './pages/Article'
+import ProfilePage from './pages/Profile'
+import { ArweaveProvider } from './hooks/use-arweave'
 
 function AppRoutes() {
   return (
@@ -13,6 +15,7 @@ function AppRoutes() {
       <Route element={<Layout />}>
         <Route path='/' index element={<HomePage />} />
         <Route path='/explore' element={<ExplorePage />} />
+        <Route path='/profile' element={<ProfilePage />} />
         <Route path='/edit/:aid' element={<EditPage />} />
         <Route path='/article/:aid' element={<ArticlePage />} />
       </Route>
@@ -26,7 +29,9 @@ function App() {
   return (
     <BrowserRouter>
       <FirebaseProvider>
-        <AppRoutes />
+        <ArweaveProvider>
+          <AppRoutes />
+        </ArweaveProvider>
       </FirebaseProvider>
     </BrowserRouter>
   )

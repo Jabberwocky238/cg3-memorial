@@ -109,7 +109,16 @@ export default function AuthPage() {
 
 					{/* 社交登录 */}
 					<div className="space-y-3">
-						<SocialButton social="google" className='w-full' theme="brand" onClick={googleSignIn}>
+						<SocialButton social="google" className='w-full' theme="brand" onClick={() => {
+							googleSignIn().then((res) => {
+								console.log(res)
+								if (res.user) {
+									navigate('/')
+								}
+							}).catch((err) => {
+								console.error(err)
+							})
+						}}>
 							Continue with Google
 						</SocialButton>
 					</div>

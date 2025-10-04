@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
-import { getDoc, doc, getFirestore, setDoc } from 'firebase/firestore/lite';
+import { getDoc, doc, getFirestore, setDoc, updateDoc } from 'firebase/firestore/lite';
 import { onAuthStateChanged, type User } from "firebase/auth"
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
 
@@ -15,6 +15,7 @@ import {
     setPersistence,
     browserLocalPersistence
 } from 'firebase/auth';
+import type { JWKInterface } from 'arweave/node/lib/wallet';
 
 const firebaseConfig = {
     apiKey: "AIzaSyAaIFNTfCj5TH7iDE3pqwt6yTY7FcIUzs4",
@@ -62,18 +63,28 @@ export interface UserMetaInfo {
     displayName: string
     email: string
     photoURL: string
+    arweaveAddress?: string
 }
 
-async function getUserMetaInfo(uid: string): Promise<UserMetaInfo> {
+async function getUserMetaInfo(uid: string): Promise<UserMetaInfo | null> {
     const userDocRef = doc(db, 'users', uid);
     const userDoc = await getDoc(userDocRef);
-    return userDoc.data() as UserMetaInfo;
+    if (userDoc.exists()) {
+        return userDoc.data() as UserMetaInfo
+    }
+    return null
 }
 
 async function setUserMetaInfo(uid: string, displayName: string, email: string, photoURL: string) {
     const userDocRef = doc(db, 'users', uid);
     await setDoc(userDocRef, { displayName, email, photoURL });
-}   
+}
+
+async function updateUserMetaInfo(uid: string, data: Record<string, any>) {
+    const userDocRef = doc(db, 'users', uid);
+    await updateDoc(userDocRef, data);
+}
+
 
 const FirebaseContext = createContext<UserContextType | null>(null)
 
@@ -116,6 +127,48 @@ export function useFirebase() {
         signOut: () => signOut(auth),
         getUserMetaInfo,
         setUserMetaInfo,
+        updateUserMetaInfo,
+        parseArweaveKey,
+        getSecretArweaveKey,
+        setSecretArweaveKey,
     }
 }
 
+
+
+function parseArweaveKey(key: Record<string, unknown>): JWKInterface | null {
+    if (!key) {
+        return null
+    }
+    const COMPONENTS = ['e', 'n', 'd', 'p', 'q', 'dp', 'dq', 'qi']
+    const components = COMPONENTS.map(component => key[component])
+    if (components.some(component => component === undefined)) {
+        return null
+    }
+    return {
+        kty: key.kty,
+        e: key.e,
+        n: key.n,
+
+        d: key.d,
+        p: key.p,
+        q: key.q,
+        dp: key.dp,
+        dq: key.dq,
+        qi: key.qi,
+    } as JWKInterface
+}
+
+async function getSecretArweaveKey(uid: string): Promise<JWKInterface | null> {
+    const userDocRef = doc(db, 'secrets', uid);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+        return parseArweaveKey(userDoc.data() as Record<string, unknown>)
+    }
+    return null
+}
+
+async function setSecretArweaveKey(uid: string, key: JWKInterface) {
+    const userDocRef = doc(db, 'secrets', uid);
+    await setDoc(userDocRef, key);
+}   

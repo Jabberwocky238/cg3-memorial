@@ -2,11 +2,11 @@ import { Outlet, useLocation, Link } from 'react-router-dom'
 import { HeaderNavigationBase } from '@/components/application/app-navigation/header-navigation'
 import { useFirebase } from '@/hooks/use-firebase'
 import { Bell01, PlusSquare, Settings01, Thermometer01 } from '@untitledui/icons'
-import { useTheme } from '@/hooks/use-theme'
 
 const navItems = [
 	{ label: 'Home', href: '/' },
 	{ label: 'Explore', href: '/explore' },
+	{ label: 'Profile', href: '/profile' },
 ]
 
 function useItemsWithCurrent() {

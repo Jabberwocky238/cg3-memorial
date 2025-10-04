@@ -34,6 +34,7 @@
 		"@tiptap/react": "^3.6.5",
 		"@tiptap/starter-kit": "^3.6.5",
 		"@untitledui/icons": "^0.0.19",
+		"arweave": "^1.15.7",
 		"firebase": "^12.3.0",
 		"firebaseui": "^6.1.0",
 		"lodash.throttle": "^4.1.1",
