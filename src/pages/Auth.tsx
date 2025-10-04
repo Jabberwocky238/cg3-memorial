@@ -5,6 +5,8 @@ import { SocialButton } from '@/components/base/buttons/social-button'
 import { Input } from '@/components/base/input/input'
 import { Button } from '@/components/base/buttons/button'
 import { updateProfile } from 'firebase/auth'
+import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/button-group'
+import { ArrowLeft, User01 } from '@untitledui/icons'
 
 export default function AuthPage() {
 	const { emailSignIn, emailSignUp, googleSignIn } = useFirebase()
@@ -66,24 +68,28 @@ export default function AuthPage() {
 
 	return (
 		<div className="relative min-h-dvh">
-			{/* 背景 */}
-			<div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-zinc-50 via-white to-zinc-100" />
+			<div className='absolute pt-4 pl-4 z-20' >
+				{/* 返回按钮 */}
+				<Button iconLeading={ArrowLeft} color='tertiary' onClick={() => navigate('/')}>
+					主页
+				</Button>
+			</div>
+
+			{/* 内容 */}
 			<div className="relative z-10 grid min-h-dvh place-items-center px-4 py-10">
-				<div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+				<div className="w-full max-w-md rounded-xl border p-6 shadow-sm">
 					{/* Tabs */}
 					<div className="mb-4 flex items-center gap-2">
-						<button
-							className={`rounded-md px-3 py-1.5 text-sm ${tab === 'login' ? 'bg-zinc-900 text-white' : 'text-zinc-700 hover:bg-zinc-100'}`}
-							onClick={() => switchTab('login')}
-						>
-							Login
-						</button>
-						<button
-							className={`rounded-md px-3 py-1.5 text-sm ${tab === 'signup' ? 'bg-zinc-900 text-white' : 'text-zinc-700 hover:bg-zinc-100'}`}
-							onClick={() => switchTab('signup')}
-						>
-							Sign up
-						</button>
+						<ButtonGroup className='w-full' selectedKeys={[tab]}>
+							<ButtonGroupItem id="login" iconLeading={User01}
+								className='w-full'
+								onClick={() => switchTab('login')}
+							>Login</ButtonGroupItem>
+							<ButtonGroupItem id="signup" iconLeading={User01}
+								className='w-full'
+								onClick={() => switchTab('signup')}
+							>Sign up</ButtonGroupItem>
+						</ButtonGroup>
 					</div>
 
 					{/* 表单 */}
@@ -94,7 +100,7 @@ export default function AuthPage() {
 						<Input label="Email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e)} type="email" isRequired />
 						<Input label="Password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e)} type="password" isRequired />
 						<Input label="Confirm Password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e)} type="password" isRequired />
-						{error && <p className="text-sm text-red-600">{error}</p>}
+						{error && <p className="text-sm">{error}</p>}
 						<Button type="submit" disabled={submitting} className="w-full">
 							{tab === 'login' ? 'Login' : 'Create account'}
 						</Button>
@@ -102,9 +108,9 @@ export default function AuthPage() {
 
 					{/* 分割 */}
 					<div className="my-5 flex items-center gap-3">
-						<div className="h-px flex-1 bg-zinc-200" />
-						<span className="text-xs text-zinc-500">OR</span>
-						<div className="h-px flex-1 bg-zinc-200" />
+						<div className="h-px flex-1" />
+						<span className="text-xs">OR</span>
+						<div className="h-px flex-1" />
 					</div>
 
 					{/* 社交登录 */}
@@ -115,9 +121,7 @@ export default function AuthPage() {
 								if (res.user) {
 									navigate('/')
 								}
-							}).catch((err) => {
-								console.error(err)
-							})
+							}).catch(console.error)
 						}}>
 							Continue with Google
 						</SocialButton>

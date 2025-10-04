@@ -7,19 +7,30 @@ import { Label } from '@/components/base/input/label'
 import { Card } from '@/components/tiptap-ui-primitive/card'
 import { User01, Wallet01, Key01, Copy01, Check } from '@untitledui/icons'
 import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group'
+import { useNavigate } from 'react-router-dom'
 
 export default function Profile() {
-    const { user, getUserMetaInfo } = useFirebase()
+    const { user, getUserMetaInfo, loading: firebaseLoading } = useFirebase()
     const { createTx, searchTx, address: arweaveAddress } = useArweave()
     const [userMeta, setUserMeta] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [copied, setCopied] = useState<string | null>(null)
     const [testContent, setTestContent] = useState('')
     const [testHeaders, setTestHeaders] = useState('')
+    const navigate = useNavigate()
 
     useEffect(() => {
         const loadUserData = async () => {
+            console.log('Profile: Firebase loading:', firebaseLoading, 'User:', user?.uid)
+            
+            // 如果 Firebase 还在加载，不执行任何操作
+            if (firebaseLoading) {
+                console.log('Profile: Firebase 还在加载中，等待...')
+                return
+            }
+            
             if (user) {
+                console.log('Profile: 用户已登录，加载用户数据...')
                 try {
                     const meta = await getUserMetaInfo(user.uid)
                     setUserMeta(meta)
@@ -28,10 +39,14 @@ export default function Profile() {
                 } finally {
                     setLoading(false)
                 }
+            } else {
+                console.log('Profile: 用户未登录，跳转到登录页面')
+                // 只有在 Firebase 加载完成且用户确实未登录时才跳转
+                navigate('/auth')
             }
         }
         loadUserData()
-    }, [user, getUserMetaInfo])
+    }, [user, getUserMetaInfo, firebaseLoading, navigate])
 
     const copyToClipboard = async (text: string, type: string) => {
         try {
@@ -79,11 +94,11 @@ export default function Profile() {
         }
     }
 
-    if (loading) {
+    if (firebaseLoading || loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto"></div>
                     <p className="mt-2 ">加载中...</p>
                 </div>
             </div>
@@ -143,7 +158,7 @@ export default function Profile() {
                             ) : (
                                 <div className="">
                                     <p>Arweave 钱包未初始化</p>
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs mt-1">
                                         调试信息: arweaveAddress = {String(arweaveAddress)}
                                     </p>
                                 </div>
@@ -240,7 +255,7 @@ export default function Profile() {
 
                             <div className="mt-6">
                                 <Label className="text-sm font-medium ">完整用户元数据</Label>
-                                <pre className="mt-2 p-4 bg-gray-100 rounded-md text-xs overflow-auto">
+                                <pre className="mt-2 p-4 rounded-md text-xs overflow-auto">
                                     {JSON.stringify(userMeta, null, 2)}
                                 </pre>
                             </div>

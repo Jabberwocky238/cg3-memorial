@@ -121,6 +121,7 @@ export function useFirebase() {
     return {
         auth,
         user: context.user,
+        loading: context.loading,
         emailSignIn,
         emailSignUp,
         googleSignIn,

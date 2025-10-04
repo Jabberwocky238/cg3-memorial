@@ -2,79 +2,77 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApi, type Article } from '@/hooks/use-backend';
 import { useFirebase, type UserMetaInfo } from '@/hooks/use-firebase';
-import { createSimpleEditor, SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
+import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group';
+import { Button } from '@/components/base/buttons/button';
+import { ArrowLeft, Edit03 } from '@untitledui/icons';
+import { useEditorLifetime } from '@/hooks/use-editor-lifetime';
+import { EditorContent } from '@tiptap/react';
 
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
     const navigate = useNavigate();
     const { getArticle } = useApi();
     const { getUserMetaInfo } = useFirebase();
-    const editor = createSimpleEditor(false);
+    const { editor, loading: editorLoading } = useEditorLifetime(false);
+
     const [author, setAuthor] = useState<UserMetaInfo | null>(null);
     const [article, setArticle] = useState<Article | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [LAE, setLAE] = useState<{ loading: boolean, error: string | null }>({ loading: true, error: null });
+    const { user } = useFirebase();
 
+    // 第一个 useEffect: 加载文章内容和用户信息
     useEffect(() => {
-        const loadArticle = async () => {
+        setLAE({ loading: true, error: null });
+        const loadArticleData = async () => {
             if (!aid) {
-                setError('文章 ID 无效');
-                setLoading(false);
+                setLAE({ loading: false, error: '文章 ID 无效' });
+                return;
+            }
+            setLAE({ loading: true, error: null });
+            console.log('Article: 开始加载文章数据', aid);
+
+            const result = await getArticle(aid);
+            if (result.error) {
+                console.error('Article: 加载文章失败', result.error);
+                setLAE({ loading: false, error: result.error });
                 return;
             }
 
-            try {
-                setLoading(true);
-                const result = await getArticle(aid);
-
-                if (result.error) {
-                    setError(result.error);
-                    return;
-                }
-
-                if (result.data) {
-                    // 获取用户信息
-                    console.log('result.data', result.data);
-                    try {
-                        const userInfo = await getUserMetaInfo(result.data.uid);
-                        // console.log('userInfo', userInfo);
-                        setAuthor(userInfo);
-                        setArticle(result.data);
-                        const content = JSON.parse(result.data.content);
-                        editor?.commands.setContent(content);
-                    } catch (err) {
-                        console.error('获取用户信息失败:', err);
-                        setAuthor(null);
-                        setArticle(null);
-                    }
-                } else {
-                    setError('文章不存在');
-                }
-            } catch (err) {
-                setError(err instanceof Error ? err.message : '加载失败');
-            } finally {
-                setLoading(false);
+            if (result.data) {
+                console.log('Article: 文章数据加载成功', result.data);
+                const userInfo = await getUserMetaInfo(result.data.uid);
+                setAuthor(userInfo);
+                setArticle(result.data);
+                console.log('Article: 文章数据和用户信息加载完成');
+                setLAE({ loading: false, error: null });
+            } else {
+                setLAE({ loading: false, error: '文章不存在' });
             }
         };
+        loadArticleData();
+    }, [aid, getArticle, getUserMetaInfo]);
 
-        loadArticle();
-    }, [aid, getUserMetaInfo]);
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('zh-CN', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    };
+    // 第二个 useEffect: 监控加载状态，当文章数据和编辑器都准备好时渲染内容
+    useEffect(() => {
+        console.log('Editor: 监控加载状态', LAE.loading, editorLoading, editor, article);
+        if (!LAE.loading && !editorLoading && editor && article) {
+            console.log('Article: 开始渲染编辑器内容');
+            try {
+                const content = JSON.parse(article.content);
+                editor.commands.setContent(content);
+                console.log('Article: 编辑器内容渲染完成');
+            } catch (err) {
+                console.error('Article: 解析文章内容失败', err);
+                editor.commands.setContent('');
+            }
+        }
+    }, [LAE.loading, editorLoading, editor, article]);
 
     const handleBack = () => {
         navigate(-1);
     };
 
-    if (loading) {
+    if (LAE.loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
@@ -85,7 +83,7 @@ export default function Article() {
         );
     }
 
-    if (error) {
+    if (LAE.error) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
@@ -95,7 +93,7 @@ export default function Article() {
                         </svg>
                     </div>
                     <h3 className="text-lg font-medium mb-2">
-                        {error || '文章不存在'}
+                        {LAE.error || '文章不存在'}
                     </h3>
                     <div className="space-x-4">
                         <button
@@ -120,50 +118,52 @@ export default function Article() {
         <div className="min-h-screen">
             <div className="py-8">
                 {/* 文章头部 */}
-                <header className="max-w-4xl mx-auto px-4 flex items-center justify-start">
+                <header className="max-w-4xl mx-auto px-4 flex items-center justify-start space-x-4">
                     {/* 返回按钮 */}
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center transition-colors px-4 "
-                    >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
+                    <Button iconLeading={ArrowLeft} color='tertiary' onClick={handleBack}>
                         返回
-                    </button>
-                    <div className="flex items-center space-x-4">
-                        {author?.photoURL ? (
-                            <img
-                                src={author.photoURL}
-                                alt={author.displayName}
-                                className="w-12 h-12 rounded-full object-cover"
-                            />
-                        ) : (
-                            <div className="w-12 h-12 rounded-full flex items-center justify-center">
-                                <span className="font-medium text-lg">
-                                    {author?.displayName?.charAt(0) || 'U'}
+                    </Button>
+                    <AvatarLabelGroup
+                        size="md"
+                        src={author?.photoURL}
+                        alt={author?.displayName || '未设置'}
+                        title={author?.displayName || '未设置'}
+                        subtitle={author?.email || '未设置'}
+                    />
+                    <div>
+                        <p className="text-sm">
+                            发布于 {formatDate(article?.created_at ?? '')}
+                            {article?.updated_at !== article?.created_at && (
+                                <span className="ml-2">
+                                    · 更新于 {formatDate(article?.updated_at ?? '')}
                                 </span>
-                            </div>
-                        )}
-                        <div>
-                            <h2 className="text-lg font-medium">
-                                {author?.displayName || '匿名用户'}
-                            </h2>
-                            <p className="text-sm">
-                                发布于 {formatDate(article?.created_at ?? '')}
-                                {article?.updated_at !== article?.created_at && (
-                                    <span className="ml-2">
-                                        · 更新于 {formatDate(article?.updated_at ?? '')}
-                                    </span>
-                                )}
-                            </p>
-                            <p>文章 ID: {article?.aid}</p>
-                        </div>
+                            )}
+                        </p>
+                        <p className='text-sm'>文章 ID: {article?.aid}</p>
                     </div>
+                    {user && user?.uid === article?.uid && (
+                        <Button iconLeading={Edit03} color='tertiary' onClick={() => navigate(`/edit/${article?.aid}`)}>
+                            编辑
+                        </Button>
+                    )}
                 </header>
 
-                {editor && <SimpleEditor editor={editor} modifiable={false} />}
+                {editor && <EditorContent
+                    editor={editor}
+                    role="presentation"
+                    className="simple-editor-content"
+                />}
             </div>
         </div>
     );
 }
+
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
