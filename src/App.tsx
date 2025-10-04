@@ -11,7 +11,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<ExplorePage />} />
+        <Route path='/' index element={<HomePage />} />
         <Route path='/explore' element={<ExplorePage />} />
         <Route path='/edit/:aid' element={<EditPage />} />
         <Route path='/article/:aid' element={<ArticlePage />} />
