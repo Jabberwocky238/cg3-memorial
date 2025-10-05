@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore/lite';
-import { onAuthStateChanged, type Auth, type User } from "firebase/auth"
+import { OAuthCredential, onAuthStateChanged, type Auth, type User } from "firebase/auth"
 import { createContext, useContext, useEffect, useRef, useState } from "react"
 
 import {
@@ -32,9 +32,9 @@ interface UserContextType {
     getUserMeta: (uid: string) => Promise<UserMetaInfo | null>
     updateUserMeta: (uid: string, userMeta: UserMetaInfo) => Promise<void>
 
-    emailSignIn: (email: string, password: string) => Promise<void>
-    emailSignUp: (email: string, password: string) => Promise<void>
-    googleSignIn: () => Promise<void>
+    emailSignIn: (email: string, password: string) => Promise<{ user: User }>
+    emailSignUp: (email: string, password: string) => Promise<{ user: User }>
+    googleSignIn: () => Promise<{ user: User, credential: OAuthCredential | null }>
     signOut: () => Promise<void>
 
     getSecretArweaveKey: (uid: string) => Promise<JWKInterface | null>
@@ -71,13 +71,13 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }, [])
 
     const _emailSignIn = async (email: string, password: string) => {
-        await emailSignIn(authRef.current!, email, password)
+        return await emailSignIn(authRef.current!, email, password)
     }
     const _emailSignUp = async (email: string, password: string) => {
-        await emailSignUp(authRef.current!, email, password)
+        return await emailSignUp(authRef.current!, email, password)
     }
     const _googleSignIn = async () => {
-        await googleSignIn(authRef.current!, googleProvider)
+        return await googleSignIn(authRef.current!, googleProvider)
     }
     const _signOut = async () => {
         await signOut(authRef.current!)

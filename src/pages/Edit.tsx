@@ -13,57 +13,50 @@ function EditPage() {
     const { user } = useFirebase()
     const { createTx } = useArweave()
     const { createArticle, getArticle } = useApi()
-    const { editor, loading: editorLoading } = useEditorLifetime(true)
+    const { editor } = useEditorLifetime(true)
     const [title, setTitle] = useState('Untitled')
     const [contentLoaded, setContentLoaded] = useState(false)
 
-    useEffect(() => {
-        const loadArticle = async () => {
-            if (!aid || !editor || editorLoading || contentLoaded) return
-            
-            console.log('Edit: 开始加载文章', aid)
-            const result = await getArticle(aid)
-            if (result.data) {
-                console.log('Edit: 文章数据加载成功', result.data)
-                setTitle(result.data.title ?? 'Untitled')
-                const content = JSON.parse(result.data.content ?? '{}')
-                editor.commands.setContent(content)
-                setContentLoaded(true)
-                console.log('Edit: 编辑器内容已设置')
-            }
+    const loadArticle = async () => {
+        if (!aid || !editor || contentLoaded) return
+        console.log('Edit: 开始加载文章', aid)
+        const result = await getArticle(aid)
+        if (result.data) {
+            console.log('Edit: 文章数据加载成功', result.data)
+            setTitle(result.data.title ?? 'Untitled')
+            const content = JSON.parse(result.data.content ?? '{}')
+            editor.commands.setContent(content)
+            setContentLoaded(true)
+            console.log('Edit: 编辑器内容已设置')
         }
-        loadArticle()
-    }, [aid, editor, editorLoading, contentLoaded, getArticle])
+    }
 
     useEffect(() => {
+        try {
+            loadArticle()
+        } catch (error) {
+            console.error('Edit: 加载文章失败', error)
+        }
+    }, [aid, editor, contentLoaded])
+
+    useEffect(() => {
+        if (!editor) return
         const timer = setInterval(() => {
-            if (editor) {
-                // 找到第一个type: heading, attr: level: 1, 的text
-                const heading = editor?.state.doc.content.content.find((node) => {
-                    const type = node.type
-                    const attrs = node.attrs
-                    return type.name === 'heading' && attrs.level === 1
-                })
-                if (!heading) {
-                    setTitle('Untitled')
-                    return
-                }
-                setTitle(heading?.content.content[0].text ?? 'Untitled')
+            // 找到第一个type: heading, attr: level: 1, 的text
+            const heading = editor.state.doc.content.content.find((node) => {
+                const type = node.type
+                const attrs = node.attrs
+                return type.name === 'heading' && attrs.level === 1
+            })
+            if (!heading) {
+                setTitle('Untitled')
+                return
             }
+            setTitle(heading?.content.content[0].text ?? 'Untitled')
         }, 1000)
         return () => clearInterval(timer)
     }, [editor])
 
-    if (editorLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"></div>
-                    <p>编辑器加载中...</p>
-                </div>
-            </div>
-        )
-    }
 
     return (
         <div className="space-y-4">

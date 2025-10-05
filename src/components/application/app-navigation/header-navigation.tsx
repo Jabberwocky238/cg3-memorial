@@ -89,7 +89,14 @@ export const HeaderNavigationBase = ({
                     <div className="mt-auto flex flex-col gap-4 px-2 py-4 lg:px-4 lg:py-6">
                         <div className="flex flex-col gap-1">
                             {actionItems?.map((item) => (
-                                <NavItemBase type="link" href={item.href} icon={item.icon} current={item.href === activeUrl}>
+                                <NavItemBase
+                                    key={item.label}
+                                    type="link"
+                                    href={item.href}
+                                    icon={item.icon}
+                                    current={item.href === activeUrl}
+                                    onClick={item.onClick}
+                                >
                                     {item.label}
                                 </NavItemBase>
                             ))}
@@ -144,7 +151,13 @@ export const HeaderNavigationBase = ({
                                 <ul className="flex items-center gap-0.5">
                                     {items.map((item) => (
                                         <li key={item.label} className="py-0.5">
-                                            <NavItemBase icon={item.icon} href={item.href} current={item.current} badge={item.badge} type="link">
+                                            <NavItemBase
+                                                icon={item.icon}
+                                                href={item.href}
+                                                current={item.current}
+                                                badge={item.badge}
+                                                type="link"
+                                            >
                                                 {item.label}
                                             </NavItemBase>
                                         </li>
