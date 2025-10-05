@@ -4,13 +4,11 @@ import { useFirebase } from '../hooks/use-firebase'
 import { SocialButton } from '@/components/base/buttons/social-button'
 import { Input } from '@/components/base/input/input'
 import { Button } from '@/components/base/buttons/button'
-import { updateProfile } from 'firebase/auth'
 import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/button-group'
 import { ArrowLeft, User01 } from '@untitledui/icons'
-import { DEFAULT_AVATAR } from '../hooks/use-firebase'
 
 export default function AuthPage() {
-	const { emailSignIn, emailSignUp, googleSignIn, updateUserMeta } = useFirebase()
+	const { emailSignIn, emailSignUp, googleSignIn } = useFirebase()
 	const navigate = useNavigate()
 	const location = useLocation()
 
@@ -20,7 +18,7 @@ export default function AuthPage() {
 		if (fromHash === 'login' || fromHash === 'signup') return fromHash
 		return 'login'
 	}, [location.hash])
-	
+
 	const [tab, setTab] = useState<'login' | 'signup'>(initialTab as 'login' | 'signup')
 
 	useEffect(() => {
@@ -39,10 +37,21 @@ export default function AuthPage() {
 		}
 	}, [tab])
 
-	const [email, setEmail] = useState('')
-	const [password, setPassword] = useState('')
-	const [displayName, setDisplayName] = useState('')
-	const [confirmPassword, setConfirmPassword] = useState('')
+	const [form, setForm] = useState<{
+		email: string
+		password: string
+		confirmPassword: string
+	}>({ email: '', password: '', confirmPassword: '' })
+
+	const validateForm = (isLogin: boolean) => {
+		if (isLogin) {
+			return form.email.trim() !== '' && form.password.trim() !== ''
+		} else {
+			const isPasswordValid = form.password.trim() === form.confirmPassword.trim() && form.password.trim() !== ''
+			return form.email.trim() !== '' && isPasswordValid
+		}
+	}
+
 	const [submitting, setSubmitting] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
@@ -51,30 +60,25 @@ export default function AuthPage() {
 		setSubmitting(true)
 		setError(null)
 		try {
+			validateForm(tab === 'login')
 			if (tab === 'login') {
-				await emailSignIn(email.trim(), password)
+				await emailSignIn(form.email.trim(), form.password)
 			} else {
-				const cred = await emailSignUp(email.trim(), password)
-				if (displayName) {
-					await updateProfile(cred.user, { displayName })
-				}
-				await updateUserMeta(cred.user.uid, { 
-					displayName: displayName || `user-${cred.user.uid.slice(0, 4)}`, 
-					email: cred.user.email || '', 
-					photoURL: cred.user.photoURL || DEFAULT_AVATAR,
-					uid: cred.user.uid,
-				})
+				await emailSignUp(form.email.trim(), form.password)
+				await navigate('/auth#login')
 			}
-			navigate('/')
 		} catch (err: any) {
 			setError(err?.message ?? 'Auth error')
 		} finally {
 			setSubmitting(false)
 		}
-	}, [email, password, displayName, tab, navigate])
+	}, [form, tab])
 
 	return (
-		<div className="relative min-h-dvh">
+		<div className="relative min-h-dvh" style={{
+			color: 'var(--color-text-primary)',
+			backgroundColor: 'var(--background-color-primary)',
+		}}>
 			<div className='absolute pt-4 pl-4 z-20' >
 				{/* 返回按钮 */}
 				<Button iconLeading={ArrowLeft} color='tertiary' onClick={() => navigate('/')}>
@@ -101,13 +105,10 @@ export default function AuthPage() {
 
 					{/* 表单 */}
 					<form onSubmit={onSubmit} className="space-y-4">
+						<Input label="Email" placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e })} type="email" isRequired />
+						<Input label="Password" placeholder="••••••••" value={form.password} onChange={(e) => setForm({ ...form, password: e })} type="password" isRequired />
 						{tab === 'signup' && (
-							<Input label="Name" placeholder="Your name" value={displayName} onChange={(e) => setDisplayName(e)} />
-						)}
-						<Input label="Email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e)} type="email" isRequired />
-						<Input label="Password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e)} type="password" isRequired />
-						{tab === 'signup' && (
-							<Input label="Confirm Password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e)} type="password" isRequired />
+							<Input label="Confirm Password" placeholder="••••••••" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e })} type="password" isRequired />
 						)}
 						{error && <p className="text-sm">{error}</p>}
 						<Button type="submit" disabled={submitting} className="w-full">

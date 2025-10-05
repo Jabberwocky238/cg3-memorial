@@ -8,32 +8,39 @@ import {
     GoogleAuthProvider,
     type UserCredential,
     setPersistence,
-    browserLocalPersistence
+    browserLocalPersistence,
+    sendEmailVerification,
+    fetchSignInMethodsForEmail,
+    signOut,
 } from 'firebase/auth';
-import type { UserMetaInfo } from './use-firebase';
+import { type UserMetaInfo } from './use-firebase';
 
 
 async function emailSignIn(auth: Auth, email: string, password: string) {
-    await setPersistence(auth, browserLocalPersistence);
     const result: UserCredential = await signInWithEmailAndPassword(auth, email, password);
+    await result.user.reload();
     return { user: result.user };
 }
 
 async function emailSignUp(auth: Auth, email: string, password: string) {
-    await setPersistence(auth, browserLocalPersistence);
     const result: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await result.user.reload();
+    await sendEmailVerification(result.user, {
+        url: `${window.location.origin}/`,
+        handleCodeInApp: false,
+    });
+    await signOut(auth);
     return { user: result.user };
 }
 
 async function googleSignIn(auth: Auth, googleProvider: GoogleAuthProvider) {
-    await setPersistence(auth, browserLocalPersistence);
     const result: UserCredential = await signInWithPopup(auth, googleProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     return { user: result.user, credential };
 }
 
 export {
-    emailSignIn,
+    emailSignIn,    
     emailSignUp,
     googleSignIn,
 }
@@ -51,6 +58,11 @@ async function getUserMetaInfo(db: Firestore, uid: string): Promise<UserMetaInfo
 
 async function updateUserMetaInfo(db: Firestore, uid: string, data: Record<string, any>) {
     const userDocRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+        await setDoc(userDocRef, data);
+        return;
+    }
     await updateDoc(userDocRef, data);
 }
 

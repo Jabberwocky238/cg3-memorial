@@ -19,7 +19,7 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
     const [privateKey, setPrivateKey] = useState<JWKInterface | null>(null)
 
     const { LOG_append, LOG_clear, setError } = useAppState()
-    const { setSecretArweaveKey, getSecretArweaveKey, user, setUserMeta, loading: fbloading } = useFirebase()
+    const { setSecretArweaveKey, getSecretArweaveKey, user, auth, setUserMeta, loading: fbloading } = useFirebase()
 
     useEffect(() => {
         LOG_append('初始化 Arweave...')
@@ -81,19 +81,15 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
         } finally {
             LOG_clear()
         }
-    }, [fbloading, arweaveRef.current])
+    }, [fbloading, arweaveRef.current, auth])
 
     const createTx = useCallback((content: string, headers: [string, string][]) => {
-        if (!arweaveRef.current || !privateKey) {
-            throw new Error('Arweave 未初始化或私钥未加载')
-        }
+        if (!arweaveRef.current || !privateKey) throw new Error('Arweave 未初始化或私钥未加载')
         return _createTx(arweaveRef.current, privateKey, content, headers)
     }, [arweaveRef.current, privateKey])
 
     const searchTx = useCallback((query: string) => {
-        if (!arweaveRef.current) {
-            throw new Error('Arweave 未初始化')
-        }
+        if (!arweaveRef.current) throw new Error('Arweave 未初始化')
         return _searchTx(arweaveRef.current, query)
     }, [arweaveRef.current])
 

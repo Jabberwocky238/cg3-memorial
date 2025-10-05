@@ -1,8 +1,7 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore/lite';
-import { OAuthCredential, onAuthStateChanged, type Auth, type User } from "firebase/auth"
+import { OAuthCredential, updateProfile, onAuthStateChanged, type Auth, type User, sendEmailVerification, browserLocalPersistence, setPersistence } from "firebase/auth"
 import { createContext, useContext, useEffect, useRef, useState } from "react"
-
 import {
     getAuth,
     signOut,
@@ -11,8 +10,9 @@ import {
 import { emailSignIn, emailSignUp, googleSignIn, getUserMetaInfo, updateUserMetaInfo, getSecretArweaveKey, setSecretArweaveKey } from './use-firebase-inner';
 import type { JWKInterface } from 'arweave/web/lib/wallet';
 import { LoadingPage } from './use-theme';
+import { useNavigate } from 'react-router-dom';
 
-export const DEFAULT_AVATAR = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+export const DEFAULT_AVATAR = "https://cdn4.iconfinder.com/data/icons/glyphs/24/icons_user-1024.png"
 
 const firebaseConfig = {
     apiKey: "AIzaSyAaIFNTfCj5TH7iDE3pqwt6yTY7FcIUzs4",
@@ -27,6 +27,7 @@ const firebaseConfig = {
 interface UserContextType {
     loading: boolean
 
+    auth: Auth | null
     user: UserMetaInfo | null
     setUserMeta: (userMeta: UserMetaInfo | null) => Promise<void>
     getUserMeta: (uid: string) => Promise<UserMetaInfo | null>
@@ -58,7 +59,8 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
     const authRef = useRef<Auth | null>(null)
     const [userMeta, setUserMeta] = useState<UserMetaInfo | null>(null)
     const googleProvider = new GoogleAuthProvider();
-
+    const navigate = useNavigate()
+        
     const [loading, setLoading] = useState(true)
     const [initing, setIniting] = useState(true)
 
@@ -68,11 +70,11 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
         appRef.current = initializeApp(firebaseConfig);
         dbRef.current = getFirestore(appRef.current);
         authRef.current = getAuth(appRef.current);
+        authRef.current.useDeviceLanguage();
+        setPersistence(authRef.current, browserLocalPersistence);
     }, [])
 
-    const _emailSignIn = async (email: string, password: string) => {
-        return await emailSignIn(authRef.current!, email, password)
-    }
+
     const _emailSignUp = async (email: string, password: string) => {
         return await emailSignUp(authRef.current!, email, password)
     }
@@ -98,8 +100,30 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
     const _setUserMeta = async (userMeta: UserMetaInfo | null) => {
         setUserMeta(userMeta)
         if (userMeta) {
+            console.log('setUserMeta', userMeta)
             await _updateUserMeta(userMeta.uid, userMeta)
+            await updateProfile(authRef.current!.currentUser!, {
+                displayName: userMeta.displayName || `user-${userMeta.uid.slice(0, 4)}`,
+                photoURL: userMeta.photoURL || DEFAULT_AVATAR,
+            })
         }
+    }
+    const _emailSignIn = async (email: string, password: string) => {
+        const { user } = await emailSignIn(authRef.current!, email, password)
+        await authRef.current?.currentUser?.reload()
+        if (authRef.current?.currentUser?.emailVerified !== true) {
+            await sendEmailVerification(user);
+            await signOut(authRef.current!);
+            throw new Error('邮箱未验证，请先完成邮箱验证，已发送验证邮件')
+        }
+        _setUserMeta({
+            uid: user.uid,
+            displayName: user.displayName || `user-${user.uid.slice(0, 4)}`,
+            email: user.email || '',
+            photoURL: user.photoURL || DEFAULT_AVATAR,
+        })
+        await navigate('/')
+        return { user }
     }
 
     useEffect(() => {
@@ -108,6 +132,12 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
         const unsubscribe = onAuthStateChanged(authRef.current, async (u: User | null) => {
             setLoading(true)
             if (u) {
+                if (u.emailVerified !== true) {
+                    setUserMeta(null)
+                    setLoading(false)
+                    await navigate('/auth#login')
+                    return
+                }
                 const userMeta = await _getUserMeta(u.uid)
                 if (!userMeta) {
                     // 新用户
@@ -141,6 +171,8 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
     return (
         <FirebaseContext.Provider value={{
             loading,
+
+            auth: authRef.current,
             user: userMeta,
             setUserMeta: _setUserMeta,
             getUserMeta: _getUserMeta,
