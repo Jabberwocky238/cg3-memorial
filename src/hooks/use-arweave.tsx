@@ -1,9 +1,11 @@
-import Arweave from 'arweave';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useFirebase } from './use-firebase';
+import { useAppState } from './use-app-state';
+
+import Arweave from 'arweave';
 import Transaction from 'arweave/node/lib/transaction';
 import type { JWKInterface } from 'arweave/node/lib/wallet';
-import { useAppState } from './use-app-state';
+
 
 interface ArweaveContextType {
     searchTx: (query: string) => Promise<any>

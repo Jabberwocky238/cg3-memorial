@@ -75,7 +75,7 @@ import "@/components/tiptap-templates/simple/simple-editor.scss"
 
 import content from "@/components/tiptap-templates/simple/data/content.json"
 
-const MainToolbarContent = ({
+export const MainToolbarContent = ({
   onHighlighterClick,
   onLinkClick,
   isMobile,
@@ -154,7 +154,7 @@ const MainToolbarContent = ({
   )
 }
 
-const MobileToolbarContent = ({
+export const MobileToolbarContent = ({
   type,
   onBack,
 }: {
@@ -183,13 +183,54 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor({ editor, modifiable = true }: { editor: Editor, modifiable: boolean }) {
+export function SimpleEditor() {
   const isMobile = useIsMobile()
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = React.useState<
     "main" | "highlighter" | "link"
   >("main")
   const toolbarRef = React.useRef<HTMLDivElement>(null)
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      shouldRerenderOnTransaction: false,
+      editable: true,
+      editorProps: {
+        attributes: {
+          class: "simple-editor",
+        },
+      },
+      extensions: [
+        StarterKit.configure({
+          horizontalRule: false,
+          link: {
+            openOnClick: false,
+            enableClickSelection: true,
+          },
+        }),
+        HorizontalRule,
+        TextAlign.configure({ types: ["heading", "paragraph"] }),
+        Typography,
+        Highlight.configure({ multicolor: true }),
+        Subscript,
+        Superscript,
+        Image.configure({
+          HTMLAttributes: {
+            class: "simple-editor-image",
+          },
+        }),
+        ImageUploadNode,
+        TaskList,
+        TaskItem.configure({
+          nested: true,
+        }),
+        Selection,
+      ],
+      onUpdate: () => {
+        // 可以在这里添加更新逻辑
+      },
+    }
+  )
 
   const rect = useCursorVisibility({
     editor,
@@ -205,7 +246,7 @@ export function SimpleEditor({ editor, modifiable = true }: { editor: Editor, mo
   return (
     <div className="simple-editor-wrapper">
       <EditorContext.Provider value={{ editor }}>
-        {modifiable && <Toolbar
+        <Toolbar
           ref={toolbarRef}
           style={{
             ...(isMobile
@@ -227,7 +268,7 @@ export function SimpleEditor({ editor, modifiable = true }: { editor: Editor, mo
               onBack={() => setMobileView("main")}
             />
           )}
-        </Toolbar>}
+        </Toolbar>
 
         <EditorContent
           editor={editor}

@@ -18,7 +18,7 @@ import { MoonStarIcon } from "@/components/tiptap-icons/moon-star-icon";
 import { SunIcon } from "@/components/tiptap-icons/sun-icon";
 import type { UserMetaInfo } from "@/hooks/use-firebase";
 
-type NavItem = {
+export type NavItem = {
     /** Label text for the nav item. */
     label: string;
     /** URL to navigate to when the nav item is clicked. */
@@ -33,7 +33,7 @@ type NavItem = {
     items?: NavItem[];
 };
 
-type ActionItem = {
+export type ActionItem = {
     size?: "md" | "lg";
     icon?: FC<{ className?: string }>;
     label: string;

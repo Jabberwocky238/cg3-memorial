@@ -1,6 +1,4 @@
 import { useEditor } from "@tiptap/react"
-import { Editor } from "@tiptap/react"
-import { useEffect, useRef, useState } from "react"
 
 // 导入编辑器配置
 import { StarterKit } from "@tiptap/starter-kit"
@@ -14,67 +12,72 @@ import { Superscript } from "@tiptap/extension-superscript"
 import { Selection } from "@tiptap/extensions"
 import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension"
 import { HorizontalRule } from "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
-import { useAppState } from "./use-app-state"
 
-export function useEditorLifetime(modifiable: boolean = true) {
-    const editorRef = useRef<Editor | null>(null)
-    const { LOG_append, LOG_clear, setError } = useAppState()
+import "@/components/tiptap-templates/simple/simple-editor.scss"
+import "@/components/tiptap-node/blockquote-node/blockquote-node.scss"
+import "@/components/tiptap-node/code-block-node/code-block-node.scss"
+import "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
+import "@/components/tiptap-node/list-node/list-node.scss"
+import "@/components/tiptap-node/image-node/image-node.scss"
+import "@/components/tiptap-node/heading-node/heading-node.scss"
+import "@/components/tiptap-node/paragraph-node/paragraph-node.scss"
+import { useMemo } from "react"
+import { useLocation } from "react-router-dom"
 
-    useEffect(() => {
-        if (editorRef.current) {
-            LOG_append('Editor: 编辑器已存在 检查参数')
-            editorRef.current.setEditable(modifiable, false)
-            editorRef.current.commands.setContent('')
-            LOG_clear()
-            setError(null)
-        } else {
-            LOG_append('Editor: 编辑器创建中...')
-            editorRef.current = useEditor({
-                immediatelyRender: true, // 立即渲染，避免null
-                shouldRerenderOnTransaction: false,
-                editable: modifiable,
-                editorProps: {
-                    attributes: {
-                        autocomplete: "off",
-                        autocorrect: "off",
-                        autocapitalize: "off",
-                        "aria-label": "Main content area, start typing to enter text.",
-                        class: "simple-editor",
-                    },
+export function useEditorLifetime(editable: boolean = true) {
+    const location = useLocation()
+    const editor = useEditor({
+        immediatelyRender: false, // 立即渲染，避免null
+        shouldRerenderOnTransaction: false,
+        editorProps: {
+            attributes: {
+                autocomplete: "off",
+                autocorrect: "off",
+                autocapitalize: "off",
+                "aria-label": "Main content area, start typing to enter text.",
+                class: "simple-editor",
+            },
+        },
+        extensions: [
+            StarterKit.configure({
+                horizontalRule: false,
+                link: {
+                    openOnClick: false,
+                    enableClickSelection: true,
                 },
-                extensions: [
-                    StarterKit.configure({
-                        horizontalRule: false,
-                        link: {
-                            openOnClick: false,
-                            enableClickSelection: true,
-                        },
-                    }),
-                    HorizontalRule,
-                    TextAlign.configure({ types: ["heading", "paragraph"] }),
-                    Typography,
-                    Highlight.configure({ multicolor: true }),
-                    Subscript,
-                    Superscript,
-                    Image.configure({
-                        HTMLAttributes: {
-                            class: "simple-editor-image",
-                        },
-                    }),
-                    ImageUploadNode,
-                    TaskList,
-                    TaskItem.configure({
-                        nested: true,
-                    }),
-                    Selection,
-                ],
-                onUpdate: () => {
-                    // 可以在这里添加更新逻辑
+            }),
+            HorizontalRule,
+            TextAlign.configure({ types: ["heading", "paragraph"] }),
+            Typography,
+            Highlight.configure({ multicolor: true }),
+            Subscript,
+            Superscript,
+            Image.configure({
+                HTMLAttributes: {
+                    class: "simple-editor-image",
                 },
-            })
-            LOG_clear()
+            }),
+            ImageUploadNode,
+            TaskList,
+            TaskItem.configure({
+                nested: true,
+            }),
+            Selection,
+        ],
+        onUpdate: () => {
+            // 可以在这里添加更新逻辑
+        },
+    })
+
+    const memoEditor = useMemo(() => {
+        if (!editor) return null
+        const isEditable = editor.isEditable
+        if (isEditable !== editable) {
+            editor.setEditable(editable, false)
         }
-    }, [modifiable])
+        editor.commands.setContent('')
+        return editor
+    }, [editor, editable, location])
 
-    return { editor: editorRef.current }
+    return { editor: memoEditor }
 }

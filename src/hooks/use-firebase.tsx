@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { emailSignIn, emailSignUp, googleSignIn, getUserMetaInfo, updateUserMetaInfo, getSecretArweaveKey, setSecretArweaveKey } from './use-firebase-inner';
 import type { JWKInterface } from 'arweave/node/lib/wallet';
-import { LoadingIndicator } from '@/components/application/loading-indicator/loading-indicator';
+import { LoadingPage } from './use-theme';
 
 const DEFAULT_AVATAR = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
 
@@ -52,7 +52,7 @@ export interface UserMetaInfo {
 
 const FirebaseContext = createContext<UserContextType | null>(null)
 
-export function FirebaseProvider({ children }: { children: React.ReactNode }) {
+export default function FirebaseProvider({ children }: { children: React.ReactNode }) {
     const appRef = useRef<FirebaseApp | null>(null)
     const dbRef = useRef<Firestore | null>(null)
     const authRef = useRef<Auth | null>(null)
@@ -135,9 +135,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }, [authRef.current, dbRef.current])
 
     if (initing) {
-        return <div className="flex justify-center items-center h-screen">
-            <LoadingIndicator type="line-spinner" size="md" label="APP Initializing..." />
-        </div>
+        return <LoadingPage label="APP Initializing..." />
     }
 
     return (

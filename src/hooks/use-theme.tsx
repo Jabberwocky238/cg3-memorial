@@ -1,9 +1,18 @@
+import { LoadingIndicator } from '@/components/application/loading-indicator/loading-indicator';
 import { createContext, useContext, useEffect, useState } from 'react';
 
 const ThemeContext = createContext<{
   theme: 'light' | 'dark',
   setTheme: (theme: 'light' | 'dark') => void;
 } | null>(null);
+
+export const LoadingPage = ({ label }: { label: string }) => {
+  return (
+    <div className="flex justify-center items-center h-screen">
+      <LoadingIndicator type="line-spinner" size="md" label={label} />
+    </div>
+  )
+}
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');

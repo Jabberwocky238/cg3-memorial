@@ -1,13 +1,24 @@
 import { Route, Routes, BrowserRouter } from 'react-router-dom'
-import HomePage from './pages/Home'
-import AuthPage from './pages/Auth'
-import Layout from './Layout'
-import { FirebaseProvider } from './hooks/use-firebase'
-import EditPage from './pages/Edit'
-import ExplorePage from './pages/Explore'
-import ArticlePage from './pages/Article'
-import ProfilePage from './pages/Profile'
+
 import { ThemeProvider } from './hooks/use-theme'
+import { lazy } from 'react'
+import FirebaseProvider from './hooks/use-firebase'
+
+const Layout = lazy(() => import('./Layout'))
+const HomePage = lazy(() => import('./pages/Home'))
+const AuthPage = lazy(() => import('./pages/Auth'))
+const EditPage = lazy(() => import('./pages/Edit'))
+const ExplorePage = lazy(() => import('./pages/Explore'))
+const ArticlePage = lazy(() => import('./pages/Article'))
+const ProfilePage = lazy(() => import('./pages/Profile'))
+
+// import Layout from './Layout'
+// import HomePage from './pages/Home'
+// import AuthPage from './pages/Auth'
+// import EditPage from './pages/Edit'
+// import ExplorePage from './pages/Explore'
+// import ArticlePage from './pages/Article'
+// import ProfilePage from './pages/Profile'
 
 function AppRoutes() {
   return (
@@ -26,17 +37,7 @@ function AppRoutes() {
 }
 
 function App() {
-  // return (
-  //   <BrowserRouter>
-  //     <Profiler id="App" onRender={(ID, phase, actualDuration, baseDuration, startTime, commitTime) => {
-  //       console.log({ ID, phase, actualDuration, baseDuration, startTime, commitTime })
-  //     }}>
-  //       <FirebaseProvider>
-  //         <AppRoutes />
-  //       </FirebaseProvider>
-  //     </Profiler>
-  //   </BrowserRouter>
-  // )
+
   return (
     <BrowserRouter>
       <ThemeProvider>

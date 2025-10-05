@@ -91,6 +91,21 @@ export const NavItemBase = ({ current, type, badge, href, icon: Icon, children, 
     }
 
     return (
+        <a
+            href={href!}
+            target={isExternal ? "_blank" : "_self"}
+            rel="noopener noreferrer"
+            className={cx("px-3 py-2", styles.root, current && styles.rootSelected)}
+            onClick={onClick}
+        >
+            {iconElement}
+            {labelElement}
+            {externalIcon}
+            {badgeElement}
+        </a>
+    )
+    
+    return (
         <AriaLink
             href={href!}
             target={isExternal ? "_blank" : "_self"}
