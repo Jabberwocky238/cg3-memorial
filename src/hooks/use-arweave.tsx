@@ -25,9 +25,9 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
         LOG_append('初始化 Arweave...')
         try {
             arweaveRef.current = Arweave.init({
-                // host: 'arweave.net',
-                // port: 443,
-                // protocol: 'https'
+                host: 'arweave.net',
+                port: 443,
+                protocol: 'https'
             })
         } catch (error) {
             setError('初始化 Arweave 失败: ' + error)
