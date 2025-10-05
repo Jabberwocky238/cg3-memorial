@@ -8,14 +8,19 @@ const ThemeContext = createContext<{
 
 export const LoadingPage = ({ label }: { label: string }) => {
   return (
-    <div className="flex justify-center items-center h-screen">
+    <div className="flex justify-center items-center h-screen"
+      style={{
+        color: 'var(--color-text-primary)',
+        backgroundColor: 'var(--background-color-primary)',
+      }}
+    >
       <LoadingIndicator type="line-spinner" size="md" label={label} />
     </div>
   )
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     // 获取系统偏好主题

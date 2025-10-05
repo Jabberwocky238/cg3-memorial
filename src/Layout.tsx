@@ -58,9 +58,12 @@ const actions = [
 
 export default function Layout() {
 	return (
-		<div className="min-h-dvh flex flex-col">
+		<div className={`min-h-dvh flex flex-col `} style={{
+			color: 'var(--color-text-primary)',
+			backgroundColor: 'var(--background-color-primary)',
+		}}>
 			<HeaderNavigation />
-			<main className="flex-1">
+			<main className={`flex-1 `}>
 				<AppStateProvider>
 					<ArweaveProvider>
 						<Outlet />

@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@import "./styles/globals.css";
 @import './styles/_variables.scss';
 @import './styles/_keyframe-animations.scss';
 
@@ -9,8 +9,6 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
   background: fixed;
 
   font-synthesis: none;
