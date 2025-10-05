@@ -38,7 +38,7 @@ export default defineConfig({
   },
   build: {
     // 关闭 Vite 自带压缩，改用自定义插件实现“排除 arweave”
-    minify: true,
+    minify: false,
     sourcemap: true,
     rollupOptions: {
       output: {
