@@ -140,9 +140,13 @@ const _createTx = async (arweave: Arweave, privateKey: JWKInterface, content: st
     // const res = await arweave.transactions.post(tx)
     // return res
 
-    const res = await arweave.api.post('tx', tx)
+    const res = await arweave.api.post('tx', tx, {
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+        },
+    })
     console.log(res)
-    return { tx, res}
+    return { tx, res }
 }
 
 

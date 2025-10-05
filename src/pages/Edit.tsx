@@ -14,6 +14,7 @@ import { Editor } from '@tiptap/react'
 import { Toolbar } from '@/components/tiptap-ui-primitive/toolbar/toolbar'
 import { MainToolbarContent } from '@/components/tiptap-templates/simple/simple-editor'
 import { MobileToolbarContent } from '@/components/tiptap-templates/simple/simple-editor'
+import { useTheme } from '@/hooks/use-theme'
 
 function EditPage() {
   const { aid } = useParams()
@@ -23,6 +24,7 @@ function EditPage() {
   const { editor } = useEditorLifetime(true)
   const [title, setTitle] = useState('Untitled')
   const [contentLoaded, setContentLoaded] = useState(false)
+  const { theme } = useTheme()
 
   const loadArticle = async () => {
     if (!aid || !editor || contentLoaded) return
@@ -98,7 +100,7 @@ function EditPage() {
           const html = editor?.getHTML()
           if (html) {
             try {
-              const template = templateMake(html, title)
+              const template = templateMake(html, title, theme === 'dark')
               const { tx, res } = await createTx(template, [
                 ['Content-Type', 'text/html'],
                 ['Title', title],
@@ -185,9 +187,9 @@ function MySimpleEditor({ editor }: { editor: Editor | null }) {
 }
 
 
-function templateMake(html: string, title: string) {
+function templateMake(html: string, title: string, isDark: boolean) {
   return `<!doctype html>
-<html lang="en">
+<html lang="en" class="${isDark ? 'dark' : ''}">
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="https://cdn4.iconfinder.com/data/icons/glyphs/24/icons_user-1024.png" />
@@ -195,7 +197,7 @@ function templateMake(html: string, title: string) {
   <title>${title}</title>
   <link rel="stylesheet" crossorigin href="/J2y9GHRusiCDDoh4vZoF2xMzf7ueAIQfPVWfnxhgbCE">
 </head>
-<body>
+<body class="${isDark ? 'dark-mode' : ''}">
  <div class="simple-editor-content">
   <div class="tiptap ProseMirror simple-editor">
     ${html}
