@@ -37,7 +37,6 @@ function AppRoutes() {
 }
 
 function App() {
-
   return (
     <BrowserRouter>
       <ThemeProvider>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useFirebase } from './use-firebase';
 import { useAppState } from './use-app-state';
 
@@ -6,10 +6,9 @@ import Arweave from 'arweave/web';
 import Transaction from 'arweave/web/lib/transaction';
 import type { JWKInterface } from 'arweave/web/lib/wallet';
 
-
 interface ArweaveContextType {
     searchTx: (query: string) => Promise<any>
-    createTx: (content: string, headers: [[string, string]]) => Promise<Transaction>
+    createTx: (content: string, headers: [string, string][]) => Promise<any>
     privateKey: JWKInterface | null
 }
 
@@ -26,9 +25,9 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
         LOG_append('初始化 Arweave...')
         try {
             arweaveRef.current = Arweave.init({
-                host: 'arweave.net',
-                port: 443,
-                protocol: 'https'
+                // host: 'arweave.net',
+                // port: 443,
+                // protocol: 'https'
             })
         } catch (error) {
             setError('初始化 Arweave 失败: ' + error)
@@ -84,28 +83,19 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
         }
     }, [fbloading, arweaveRef.current])
 
-    const createTx = async (content: string, headers: [[string, string]]) => {
-        if (!privateKey || !arweaveRef.current) {
-            throw new Error('Arweave 私钥未加载或未初始化')
+    const createTx = useCallback((content: string, headers: [string, string][]) => {
+        if (!arweaveRef.current || !privateKey) {
+            throw new Error('Arweave 未初始化或私钥未加载')
         }
-        const tx = await arweaveRef.current.createTransaction({
-            data: content,
-        }, privateKey)
-        for (const header of headers) {
-            tx.addTag(header[0], header[1])
-        }
-        await arweaveRef.current.transactions.sign(tx, privateKey)
-        console.log(tx, privateKey)
-        // const res = await arweave.transactions.post(tx)
-        // console.log(res)
-        // return res
-        return tx
-    }
+        return _createTx(arweaveRef.current, privateKey, content, headers)
+    }, [arweaveRef.current, privateKey])
 
-    const searchTx = async (query: string) => {
-        const res = await arweaveRef.current?.transactions.get(query)
-        return res
-    }
+    const searchTx = useCallback((query: string) => {
+        if (!arweaveRef.current) {
+            throw new Error('Arweave 未初始化')
+        }
+        return _searchTx(arweaveRef.current, query)
+    }, [arweaveRef.current])
 
     return (
         <ArweaveContext.Provider value={{ createTx, searchTx, privateKey }}>
@@ -124,3 +114,39 @@ export function useArweave() {
     return context
 }
 
+
+const _createTx = async (arweave: Arweave, privateKey: JWKInterface, content: string, headers: [string, string][]) => {
+    const tx = await arweave.createTransaction({
+        data: content,
+    }, privateKey)
+    for (const header of headers) {
+        tx.addTag(header[0], header[1])
+    }
+    await arweave.transactions.sign(tx, privateKey)
+    console.log(tx, privateKey)
+    const isVerify = await arweave.transactions.verify(tx)
+    console.log(isVerify)
+
+    
+    // const uploader = await arweave.transactions.getUploader(tx);
+    // while (!uploader.isComplete) {
+    //     const res = await uploader.uploadChunk();
+    //     console.log(res)
+    //     console.log(uploader.pctComplete, uploader)
+    // }
+    // console.log(uploader.toJSON())
+    // return uploader.toJSON()
+
+    // const res = await arweave.transactions.post(tx)
+    // return res
+
+    const res = await arweave.api.post('tx', tx)
+    console.log(res)
+    return { tx, res}
+}
+
+
+const _searchTx = async (arweave: Arweave, query: string) => {
+    const res = await arweave.transactions.get(query)
+    return res
+}
