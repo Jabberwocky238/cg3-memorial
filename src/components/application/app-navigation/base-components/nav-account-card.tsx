@@ -10,8 +10,7 @@ import { Button } from "../../../base/buttons/button";
 import { RadioButtonBase } from "../../../base/radio-buttons/radio-buttons";
 import { useBreakpoint } from "@/hooks/tiptap/use-breakpoint";
 import { cx } from "@/utils/cx";
-import type { User } from "firebase/auth";
-import { useFirebase } from "@/hooks/use-firebase";
+import { useFirebase, type UserMetaInfo } from "@/hooks/use-firebase";
 import { useNavigate } from "react-router-dom";
 
 export const NavAccountMenu = ({
@@ -19,7 +18,7 @@ export const NavAccountMenu = ({
     selectedAccountId,
     items,
     ...dialogProps
-}: AriaDialogProps & { className?: string; items?: User[]; selectedAccountId?: string }) => {
+}: AriaDialogProps & { className?: string; items?: UserMetaInfo[]; selectedAccountId?: string }) => {
     const focusManager = useFocusManager();
     const dialogRef = useRef<HTMLDivElement>(null);
     const { signOut } = useFirebase();
@@ -138,7 +137,7 @@ export const NavAccountCard = ({
 }: {
     popoverPlacement?: Placement;
     selectedAccountId?: string;
-    items: User[];
+    items: UserMetaInfo[];
 }) => {
     const triggerRef = useRef<HTMLDivElement>(null);
     const isDesktop = useBreakpoint("lg");

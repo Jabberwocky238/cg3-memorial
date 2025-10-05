@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 
-export const useTheme = () => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+const ThemeContext = createContext<{
+  theme: 'light' | 'dark',
+  setTheme: (theme: 'light' | 'dark') => void;
+} | null>(null);
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
     // 获取系统偏好主题
@@ -44,5 +49,16 @@ export const useTheme = () => {
     localStorage.setItem('theme', theme);
   };
 
-  return { theme, setTheme: applyTheme };
+  return <ThemeContext.Provider value={{ theme, setTheme: applyTheme }}>
+    {children}
+  </ThemeContext.Provider>;
+}
+
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
 };

@@ -7,112 +7,72 @@ import { Button } from '@/components/base/buttons/button';
 import { ArrowLeft, Edit03 } from '@untitledui/icons';
 import { useEditorLifetime } from '@/hooks/use-editor-lifetime';
 import { EditorContent } from '@tiptap/react';
+import { useAppState } from '@/hooks/use-app-state';
 
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
     const navigate = useNavigate();
     const { getArticle } = useApi();
-    const { getUserMetaInfo } = useFirebase();
-    const { editor, loading: editorLoading } = useEditorLifetime(false);
-
+    const { editor } = useEditorLifetime(false);
+    const { LOG_append, LOG_clear, setError } = useAppState();
     const [author, setAuthor] = useState<UserMetaInfo | null>(null);
     const [article, setArticle] = useState<Article | null>(null);
-    const [LAE, setLAE] = useState<{ loading: boolean, error: string | null }>({ loading: true, error: null });
-    const { user } = useFirebase();
+    const { user, getUserMeta } = useFirebase();
+
+    const loadArticleData = async () => {
+        if (!aid) {
+            throw new Error('文章 ID 无效');
+        }
+        const result = await getArticle(aid);
+        if (result.error) {
+            throw new Error('Article: 加载文章失败' + result.error);
+        }
+        if (result.data) {
+            console.log('Article: 文章数据加载成功', result.data);
+            const userInfo = await getUserMeta(result.data.uid);
+            setAuthor(userInfo);
+            setArticle(result.data);
+            console.log('Article: 文章数据和用户信息加载完成');
+        } else {
+            throw new Error('文章不存在');
+        }
+    };
 
     // 第一个 useEffect: 加载文章内容和用户信息
     useEffect(() => {
-        setLAE({ loading: true, error: null });
-        const loadArticleData = async () => {
-            if (!aid) {
-                setLAE({ loading: false, error: '文章 ID 无效' });
-                return;
-            }
-            setLAE({ loading: true, error: null });
-            console.log('Article: 开始加载文章数据', aid);
+        LOG_append('Article: 开始加载文章数据' + aid);
+        try {
+            loadArticleData();
+        } catch (error) {
+            setError('Article: 加载文章数据失败' + error);
+        } finally {
+            LOG_clear();
+        }
+    }, [aid, getArticle, getUserMeta]);
 
-            const result = await getArticle(aid);
-            if (result.error) {
-                console.error('Article: 加载文章失败', result.error);
-                setLAE({ loading: false, error: result.error });
-                return;
-            }
-
-            if (result.data) {
-                console.log('Article: 文章数据加载成功', result.data);
-                const userInfo = await getUserMetaInfo(result.data.uid);
-                setAuthor(userInfo);
-                setArticle(result.data);
-                console.log('Article: 文章数据和用户信息加载完成');
-                setLAE({ loading: false, error: null });
-            } else {
-                setLAE({ loading: false, error: '文章不存在' });
-            }
-        };
-        loadArticleData();
-    }, [aid, getArticle, getUserMetaInfo]);
+    const loadEditorContent = async () => {
+        if (!editor || !article) return
+        const content = JSON.parse(article.content);
+        editor.commands.setContent(content);
+    }
 
     // 第二个 useEffect: 监控加载状态，当文章数据和编辑器都准备好时渲染内容
     useEffect(() => {
-        console.log('Editor: 监控加载状态', LAE.loading, editorLoading, editor, article);
-        if (!LAE.loading && !editorLoading && editor && article) {
-            console.log('Article: 开始渲染编辑器内容');
+        if (editor && article) {
             try {
-                const content = JSON.parse(article.content);
-                editor.commands.setContent(content);
-                console.log('Article: 编辑器内容渲染完成');
-            } catch (err) {
-                console.error('Article: 解析文章内容失败', err);
-                editor.commands.setContent('');
+                LOG_append('Article: 开始渲染编辑器内容');
+                loadEditorContent();
+            } catch (error) {
+                setError('Article: 加载编辑器内容失败' + error);
+            } finally {
+                LOG_clear();
             }
         }
-    }, [LAE.loading, editorLoading, editor, article]);
+    }, [article, editor]);
 
     const handleBack = () => {
         navigate(-1);
     };
-
-    if (LAE.loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"></div>
-                    <p>加载中...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (LAE.error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="mb-4">
-                        <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                        </svg>
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">
-                        {LAE.error || '文章不存在'}
-                    </h3>
-                    <div className="space-x-4">
-                        <button
-                            onClick={handleBack}
-                            className="px-4 py-2 rounded"
-                        >
-                            返回
-                        </button>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="px-4 py-2 rounded"
-                        >
-                            重试
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen">

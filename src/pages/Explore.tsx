@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApi, type Article } from '@/hooks/use-backend';
 import { useFirebase } from '@/hooks/use-firebase';
 import { useNavigate } from 'react-router-dom';
+import { useAppState } from '@/hooks/use-app-state';
 
 interface ArticleWithUser extends Article {
   userInfo?: {
@@ -12,79 +13,47 @@ interface ArticleWithUser extends Article {
 }
 
 export default function Explore() {
-  const { getUserMetaInfo } = useFirebase();
+  const { getUserMeta } = useFirebase();
+  const { LOG_append, LOG_clear, setError } = useAppState();
   const [articles, setArticles] = useState<ArticleWithUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { listArticles } = useApi();
   const navigate = useNavigate();
-  
+
+  const loadArticles = async () => {
+    const result = await listArticles();
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    if (result.data) {
+      // 为每篇文章获取用户信息
+      const articlesWithUser = await Promise.all(
+        result.data.map(async (article: Article) => {
+          try {
+            const userInfo = await getUserMeta(article.uid);
+            return {
+              ...article,
+              userInfo: userInfo || undefined,
+            };
+          } catch (err) {
+            console.error('获取用户信息失败:', err);
+            return article;
+          }
+        })
+      );
+      setArticles(articlesWithUser);
+    }
+  };
+
   useEffect(() => {
-    const loadArticles = async () => {
-      try {
-        setLoading(true);
-        const result = await listArticles();
-
-        if (result.error) {
-          setError(result.error);
-          return;
-        }
-
-        if (result.data) {
-          // 为每篇文章获取用户信息
-          const articlesWithUser = await Promise.all(
-            result.data.map(async (article: Article) => {
-              try {
-                const userInfo = await getUserMetaInfo(article.uid);
-                return {
-                  ...article,
-                  userInfo: userInfo || undefined,
-                };
-              } catch (err) {
-                console.error('获取用户信息失败:', err);
-                return article;
-              }
-            })
-          );
-
-          setArticles(articlesWithUser);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '加载失败');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadArticles();
-  }, [getUserMetaInfo]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"></div>
-          <p>加载中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="mb-4">加载失败: {error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded"
-          >
-            重试
-          </button>
-        </div>
-      </div>
-    );
-  }
+    LOG_append('Explore: 开始加载文章');
+    try {
+      loadArticles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载失败');
+    } finally {
+      LOG_clear();
+    }
+  }, []);
 
   return (
     <div className="min-h-screen">

@@ -1,13 +1,13 @@
-import { Route, Routes, Navigate, BrowserRouter } from 'react-router-dom'
+import { Route, Routes, BrowserRouter } from 'react-router-dom'
 import HomePage from './pages/Home'
 import AuthPage from './pages/Auth'
-import Layout from './pages/Layout'
+import Layout from './Layout'
 import { FirebaseProvider } from './hooks/use-firebase'
 import EditPage from './pages/Edit'
 import ExplorePage from './pages/Explore'
 import ArticlePage from './pages/Article'
 import ProfilePage from './pages/Profile'
-import { ArweaveProvider } from './hooks/use-arweave'
+import { ThemeProvider } from './hooks/use-theme'
 
 function AppRoutes() {
   return (
@@ -26,13 +26,24 @@ function AppRoutes() {
 }
 
 function App() {
+  // return (
+  //   <BrowserRouter>
+  //     <Profiler id="App" onRender={(ID, phase, actualDuration, baseDuration, startTime, commitTime) => {
+  //       console.log({ ID, phase, actualDuration, baseDuration, startTime, commitTime })
+  //     }}>
+  //       <FirebaseProvider>
+  //         <AppRoutes />
+  //       </FirebaseProvider>
+  //     </Profiler>
+  //   </BrowserRouter>
+  // )
   return (
     <BrowserRouter>
-      <FirebaseProvider>
-        <ArweaveProvider>
+      <ThemeProvider>
+        <FirebaseProvider>
           <AppRoutes />
-        </ArweaveProvider>
-      </FirebaseProvider>
+        </FirebaseProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

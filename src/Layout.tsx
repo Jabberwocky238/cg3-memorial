@@ -2,6 +2,8 @@ import { Outlet, useLocation, Link } from 'react-router-dom'
 import { HeaderNavigationBase } from '@/components/application/app-navigation/header-navigation'
 import { useFirebase } from '@/hooks/use-firebase'
 import { Bell01, PlusSquare, Settings01, Thermometer01 } from '@untitledui/icons'
+import { ArweaveProvider } from './hooks/use-arweave'
+import { AppStateProvider } from './hooks/use-app-state'
 
 const navItems = [
 	{ label: 'Home', href: '/' },
@@ -49,11 +51,12 @@ export default function Layout() {
 				user={user}
 			/>
 			<main className="flex-1">
-				<Outlet />
+				<AppStateProvider>
+					<ArweaveProvider>
+						<Outlet />
+					</ArweaveProvider>
+				</AppStateProvider>
 			</main>
-			<footer className="p-4 text-center text-xs">
-				<Link to="/auth" className="underline">Auth</Link>
-			</footer>
 		</div>
 	)
 }

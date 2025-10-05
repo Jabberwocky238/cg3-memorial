@@ -1,21 +1,18 @@
-import { initializeApp } from 'firebase/app';
-import { getAnalytics } from "firebase/analytics";
-import { getDoc, doc, getFirestore, setDoc, updateDoc } from 'firebase/firestore/lite';
-import { onAuthStateChanged, type User } from "firebase/auth"
-import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { initializeApp, type FirebaseApp } from 'firebase/app';
+import { getFirestore, Firestore } from 'firebase/firestore/lite';
+import { onAuthStateChanged, type Auth, type User } from "firebase/auth"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 
 import {
     getAuth,
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    createUserWithEmailAndPassword,
     signOut,
     GoogleAuthProvider,
-    type UserCredential,
-    setPersistence,
-    browserLocalPersistence
 } from 'firebase/auth';
+import { emailSignIn, emailSignUp, googleSignIn, getUserMetaInfo, updateUserMetaInfo, getSecretArweaveKey, setSecretArweaveKey } from './use-firebase-inner';
 import type { JWKInterface } from 'arweave/node/lib/wallet';
+import { LoadingIndicator } from '@/components/application/loading-indicator/loading-indicator';
+
+const DEFAULT_AVATAR = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
 
 const firebaseConfig = {
     apiKey: "AIzaSyAaIFNTfCj5TH7iDE3pqwt6yTY7FcIUzs4",
@@ -27,87 +24,143 @@ const firebaseConfig = {
     measurementId: "G-5DXDW8RXBR"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const db = getFirestore(app);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
-
-async function emailSignIn(email: string, password: string) {
-    await setPersistence(auth, browserLocalPersistence);
-    const result: UserCredential = await signInWithEmailAndPassword(auth, email, password);
-    return { user: result.user };
-}
-
-async function emailSignUp(email: string, password: string) {
-    await setPersistence(auth, browserLocalPersistence);
-    const result: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
-    return { user: result.user };
-}
-
-async function googleSignIn() {
-    await setPersistence(auth, browserLocalPersistence);
-    const result: UserCredential = await signInWithPopup(auth, googleProvider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    return { user: result.user, credential };
-}
-
-
 interface UserContextType {
-    user: User | null
     loading: boolean
+
+    user: UserMetaInfo | null
+    setUserMeta: (userMeta: UserMetaInfo | null) => Promise<void>
+    getUserMeta: (uid: string) => Promise<UserMetaInfo | null>
+    updateUserMeta: (uid: string, userMeta: UserMetaInfo) => Promise<void>
+
+    emailSignIn: (email: string, password: string) => Promise<void>
+    emailSignUp: (email: string, password: string) => Promise<void>
+    googleSignIn: () => Promise<void>
+    signOut: () => Promise<void>
+
+    getSecretArweaveKey: (uid: string) => Promise<JWKInterface | null>
+    setSecretArweaveKey: (uid: string, key: JWKInterface) => Promise<void>
 }
 
 export interface UserMetaInfo {
+    uid: string
     displayName: string
     email: string
     photoURL: string
     arweaveAddress?: string
+    solanaAddress?: string
 }
-
-async function getUserMetaInfo(uid: string): Promise<UserMetaInfo | null> {
-    const userDocRef = doc(db, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-        return userDoc.data() as UserMetaInfo
-    }
-    return null
-}
-
-async function setUserMetaInfo(uid: string, displayName: string, email: string, photoURL: string) {
-    const userDocRef = doc(db, 'users', uid);
-    await setDoc(userDocRef, { displayName, email, photoURL });
-}
-
-async function updateUserMetaInfo(uid: string, data: Record<string, any>) {
-    const userDocRef = doc(db, 'users', uid);
-    await updateDoc(userDocRef, data);
-}
-
 
 const FirebaseContext = createContext<UserContextType | null>(null)
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null)
+    const appRef = useRef<FirebaseApp | null>(null)
+    const dbRef = useRef<Firestore | null>(null)
+    const authRef = useRef<Auth | null>(null)
+    const [userMeta, setUserMeta] = useState<UserMetaInfo | null>(null)
+    const googleProvider = new GoogleAuthProvider();
+
     const [loading, setLoading] = useState(true)
+    const [initing, setIniting] = useState(true)
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (u: User | null) => {
-            setUser(u)
-            if (u && u.displayName && u.email && u.photoURL) {
-                setUserMetaInfo(u.uid, u.displayName, u.email, u.photoURL)
+        // Initialize Firebase
+        if (appRef.current) return
+        appRef.current = initializeApp(firebaseConfig);
+        dbRef.current = getFirestore(appRef.current);
+        authRef.current = getAuth(appRef.current);
+    }, [])
+
+    const _emailSignIn = async (email: string, password: string) => {
+        await emailSignIn(authRef.current!, email, password)
+    }
+    const _emailSignUp = async (email: string, password: string) => {
+        await emailSignUp(authRef.current!, email, password)
+    }
+    const _googleSignIn = async () => {
+        await googleSignIn(authRef.current!, googleProvider)
+    }
+    const _signOut = async () => {
+        await signOut(authRef.current!)
+    }
+    const _getUserMeta = async (uid: string) => {
+        return await getUserMetaInfo(dbRef.current!, uid)
+    }
+    const _updateUserMeta = async (uid: string, userMeta: UserMetaInfo) => {
+        await updateUserMetaInfo(dbRef.current!, uid, userMeta)
+    }
+    const _getSecretArweaveKey = async (uid: string) => {
+        return await getSecretArweaveKey(dbRef.current!, uid)
+    }
+    const _setSecretArweaveKey = async (uid: string, key: JWKInterface) => {
+        await setSecretArweaveKey(dbRef.current!, uid, key)
+    }
+
+    const _setUserMeta = async (userMeta: UserMetaInfo | null) => {
+        setUserMeta(userMeta)
+        if (userMeta) {
+            await _updateUserMeta(userMeta.uid, userMeta)
+        }
+    }
+
+    useEffect(() => {
+        if (!authRef.current || !dbRef.current) return
+        setIniting(false)
+        const unsubscribe = onAuthStateChanged(authRef.current, async (u: User | null) => {
+            setLoading(true)
+            if (u) {
+                const userMeta = await _getUserMeta(u.uid)
+                if (!userMeta) {
+                    // 新用户
+                    setUserMeta({
+                        uid: u.uid,
+                        displayName: u.displayName || `user-${u.uid.slice(0, 4)}`,
+                        email: u.email || '',
+                        photoURL: u.photoURL || DEFAULT_AVATAR,
+                    })
+                } else {
+                    // 老用户
+                    setUserMeta({
+                        uid: u.uid,
+                        displayName: u.displayName || userMeta.displayName,
+                        email: u.email || userMeta.email,
+                        photoURL: u.photoURL || userMeta.photoURL,
+                    })
+                }
+            } else {
+                setUserMeta(null)
             }
             setLoading(false)
         })
         return unsubscribe
-    }, [auth])
+    }, [authRef.current, dbRef.current])
 
-    const value = useMemo<UserContextType>(() => ({ user, loading }), [user, loading])
+    if (initing) {
+        return <div className="flex justify-center items-center h-screen">
+            <LoadingIndicator type="line-spinner" size="md" label="APP Initializing..." />
+        </div>
+    }
 
     return (
-        <FirebaseContext.Provider value={value}>
+        <FirebaseContext.Provider value={{
+            loading,
+            user: userMeta,
+            setUserMeta: _setUserMeta,
+            getUserMeta: _getUserMeta,
+            updateUserMeta: _updateUserMeta,
+
+            emailSignIn: _emailSignIn,
+            emailSignUp: _emailSignUp,
+            googleSignIn: _googleSignIn,
+            signOut: _signOut,
+
+            getSecretArweaveKey: _getSecretArweaveKey,
+            setSecretArweaveKey: _setSecretArweaveKey,
+        }}>
+            {/* <Profiler id="FirebaseProvider" onRender={(ID, phase, actualDuration, baseDuration, startTime, commitTime) => {
+                console.log({ ID, phase, actualDuration, baseDuration, startTime, commitTime })
+            }}> */}
             {children}
+            {/* </Profiler> */}
         </FirebaseContext.Provider>
     )
 }
@@ -118,58 +171,6 @@ export function useFirebase() {
     if (!context) {
         throw new Error('useUser must be used within a UserProvider')
     }
-    return {
-        auth,
-        user: context.user,
-        loading: context.loading,
-        emailSignIn,
-        emailSignUp,
-        googleSignIn,
-        signOut: () => signOut(auth),
-        getUserMetaInfo,
-        setUserMetaInfo,
-        updateUserMetaInfo,
-        parseArweaveKey,
-        getSecretArweaveKey,
-        setSecretArweaveKey,
-    }
+    return context
 }
 
-
-
-function parseArweaveKey(key: Record<string, unknown>): JWKInterface | null {
-    if (!key) {
-        return null
-    }
-    const COMPONENTS = ['e', 'n', 'd', 'p', 'q', 'dp', 'dq', 'qi']
-    const components = COMPONENTS.map(component => key[component])
-    if (components.some(component => component === undefined)) {
-        return null
-    }
-    return {
-        kty: key.kty,
-        e: key.e,
-        n: key.n,
-
-        d: key.d,
-        p: key.p,
-        q: key.q,
-        dp: key.dp,
-        dq: key.dq,
-        qi: key.qi,
-    } as JWKInterface
-}
-
-async function getSecretArweaveKey(uid: string): Promise<JWKInterface | null> {
-    const userDocRef = doc(db, 'secrets', uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-        return parseArweaveKey(userDoc.data() as Record<string, unknown>)
-    }
-    return null
-}
-
-async function setSecretArweaveKey(uid: string, key: JWKInterface) {
-    const userDocRef = doc(db, 'secrets', uid);
-    await setDoc(userDocRef, key);
-}   
