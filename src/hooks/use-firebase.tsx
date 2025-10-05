@@ -9,7 +9,7 @@ import {
     GoogleAuthProvider,
 } from 'firebase/auth';
 import { emailSignIn, emailSignUp, googleSignIn, getUserMetaInfo, updateUserMetaInfo, getSecretArweaveKey, setSecretArweaveKey } from './use-firebase-inner';
-import type { JWKInterface } from 'arweave/node/lib/wallet';
+import type { JWKInterface } from 'arweave/web/lib/wallet';
 import { LoadingPage } from './use-theme';
 
 const DEFAULT_AVATAR = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="

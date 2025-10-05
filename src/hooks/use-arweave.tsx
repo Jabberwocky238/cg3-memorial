@@ -2,9 +2,9 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, useTra
 import { useFirebase } from './use-firebase';
 import { useAppState } from './use-app-state';
 
-import Arweave from 'arweave';
-import Transaction from 'arweave/node/lib/transaction';
-import type { JWKInterface } from 'arweave/node/lib/wallet';
+import Arweave from 'arweave/web';
+import Transaction from 'arweave/web/lib/transaction';
+import type { JWKInterface } from 'arweave/web/lib/wallet';
 
 
 interface ArweaveContextType {
