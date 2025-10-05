@@ -12,7 +12,7 @@ import { emailSignIn, emailSignUp, googleSignIn, getUserMetaInfo, updateUserMeta
 import type { JWKInterface } from 'arweave/web/lib/wallet';
 import { LoadingPage } from './use-theme';
 
-const DEFAULT_AVATAR = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+export const DEFAULT_AVATAR = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
 
 const firebaseConfig = {
     apiKey: "AIzaSyAaIFNTfCj5TH7iDE3pqwt6yTY7FcIUzs4",

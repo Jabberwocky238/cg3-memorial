@@ -7,9 +7,10 @@ import { Button } from '@/components/base/buttons/button'
 import { updateProfile } from 'firebase/auth'
 import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/button-group'
 import { ArrowLeft, User01 } from '@untitledui/icons'
+import { DEFAULT_AVATAR } from '../hooks/use-firebase'
 
 export default function AuthPage() {
-	const { emailSignIn, emailSignUp, googleSignIn } = useFirebase()
+	const { emailSignIn, emailSignUp, googleSignIn, updateUserMeta } = useFirebase()
 	const navigate = useNavigate()
 	const location = useLocation()
 
@@ -19,7 +20,7 @@ export default function AuthPage() {
 		if (fromHash === 'login' || fromHash === 'signup') return fromHash
 		return 'login'
 	}, [location.hash])
-
+	
 	const [tab, setTab] = useState<'login' | 'signup'>(initialTab as 'login' | 'signup')
 
 	useEffect(() => {
@@ -57,6 +58,12 @@ export default function AuthPage() {
 				if (displayName) {
 					await updateProfile(cred.user, { displayName })
 				}
+				await updateUserMeta(cred.user.uid, { 
+					displayName: displayName || `user-${cred.user.uid.slice(0, 4)}`, 
+					email: cred.user.email || '', 
+					photoURL: cred.user.photoURL || DEFAULT_AVATAR,
+					uid: cred.user.uid,
+				})
 			}
 			navigate('/')
 		} catch (err: any) {
@@ -99,7 +106,9 @@ export default function AuthPage() {
 						)}
 						<Input label="Email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e)} type="email" isRequired />
 						<Input label="Password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e)} type="password" isRequired />
-						<Input label="Confirm Password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e)} type="password" isRequired />
+						{tab === 'signup' && (
+							<Input label="Confirm Password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e)} type="password" isRequired />
+						)}
 						{error && <p className="text-sm">{error}</p>}
 						<Button type="submit" disabled={submitting} className="w-full">
 							{tab === 'login' ? 'Login' : 'Create account'}
