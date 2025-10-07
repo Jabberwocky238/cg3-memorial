@@ -119,5 +119,32 @@ export function useApi() {
     createUser,
     getUser,
     updateUser,
+
+    loadThisUserAccount,
   };
+}
+
+/// ##################### Wallet
+
+// const CASHIER_URL = "http://localhost:8787" 
+const CASHIER_URL = "https://cashier.permane.world"
+
+async function loadThisUserAccount(jwt: string) {
+  const result = await fetch(CASHIER_URL + "/my_account", {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${jwt}`
+    }
+  })
+  if (!result.ok) {
+    throw new Error("Failed to load this user account")
+  }
+  const data = await result.json() as {
+    uid_firebase: string;
+    balance_usd: number;
+    misc: string;
+    created_at: string;
+    updated_at: string;
+  }
+  return data
 }

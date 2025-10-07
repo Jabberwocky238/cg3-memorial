@@ -9,14 +9,14 @@ import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group'
 import { useNavigate } from 'react-router-dom'
 
 export default function Profile() {
-    const { user, loading: firebaseLoading } = useFirebase()
+    const { user, loading: firebaseLoading, userCashier } = useFirebase()
 
     const navigate = useNavigate()
 
     useEffect(() => {
         if (firebaseLoading) return
         if (!user) navigate('/auth')
-    }, [user, firebaseLoading, navigate])
+    }, [user, userCashier, firebaseLoading, navigate])
 
     const copyToClipboard = async (text: string, type: string) => {
         try {
@@ -85,7 +85,7 @@ export default function Profile() {
                     <div className="p-6">
                         <h3 className="text-lg font-semibold  mb-4">用户数据监视</h3>
                         <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 <div>
                                     <Label className="text-sm font-medium ">用户ID</Label>
                                     <p className="mt-1 text-sm  font-mono">{user.uid}</p>
@@ -102,12 +102,17 @@ export default function Profile() {
                                     <Label className="text-sm font-medium ">Arweave 地址</Label>
                                     <p className="mt-1 text-sm  font-mono">{user.arweaveAddress || '未设置'}</p>
                                 </div>
+                                <div>
+                                    <Label className="text-sm font-medium ">钱包余额</Label>
+                                    <p className="mt-1 text-sm ">{userCashier?.balance_usd}</p>
+                                </div>
                             </div>
 
                             <div className="mt-6">
                                 <Label className="text-sm font-medium ">完整用户元数据</Label>
-                                <pre className="mt-2 p-4 rounded-md text-xs overflow-auto">
+                                <pre className="mt-2 p-4 rounded-md text-xs overflow-auto break-all overflow-x-hidden">
                                     {JSON.stringify(user, null, 2)}
+                                    {JSON.stringify(userCashier, null, 2)}
                                 </pre>
                             </div>
                         </div>

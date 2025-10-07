@@ -11,6 +11,7 @@ import { emailSignIn, emailSignUp, googleSignIn, getUserMetaInfo, updateUserMeta
 import type { JWKInterface } from 'arweave/web/lib/wallet';
 import { LoadingPage } from './use-theme';
 import { useNavigate } from 'react-router-dom';
+import { useApi } from './use-backend';
 
 export const DEFAULT_AVATAR = "https://cdn4.iconfinder.com/data/icons/glyphs/24/icons_user-1024.png"
 
@@ -29,6 +30,7 @@ interface UserContextType {
 
     auth: Auth | null
     user: UserMetaInfo | null
+    userCashier: UserCashier | null
     setUserMeta: (userMeta: UserMetaInfo | null) => Promise<void>
     getUserMeta: (uid: string) => Promise<UserMetaInfo | null>
     updateUserMeta: (uid: string, userMeta: UserMetaInfo) => Promise<void>
@@ -51,6 +53,14 @@ export interface UserMetaInfo {
     solanaAddress?: string
 }
 
+export interface UserCashier {
+    uid_firebase: string
+    balance_usd: number
+    misc: string
+    created_at: string
+    updated_at: string
+}
+
 const FirebaseContext = createContext<UserContextType | null>(null)
 
 export default function FirebaseProvider({ children }: { children: React.ReactNode }) {
@@ -58,9 +68,11 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
     const dbRef = useRef<Firestore | null>(null)
     const authRef = useRef<Auth | null>(null)
     const [userMeta, setUserMeta] = useState<UserMetaInfo | null>(null)
+    const [userCashier, setUserCashier] = useState<UserCashier | null>(null)
     const googleProvider = new GoogleAuthProvider();
     const navigate = useNavigate()
-        
+    const { loadThisUserAccount } = useApi()
+
     const [loading, setLoading] = useState(true)
     const [initing, setIniting] = useState(true)
 
@@ -156,6 +168,10 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
                         photoURL: u.photoURL || userMeta.photoURL,
                     })
                 }
+                const idToken = await u.getIdToken(true)
+                const userCashier = await loadThisUserAccount(idToken)
+                console.log('userCashier', userCashier)
+                setUserCashier(userCashier)
             } else {
                 setUserMeta(null)
             }
@@ -174,6 +190,7 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
 
             auth: authRef.current,
             user: userMeta,
+            userCashier: userCashier,
             setUserMeta: _setUserMeta,
             getUserMeta: _getUserMeta,
             updateUserMeta: _updateUserMeta,
