@@ -18,7 +18,7 @@ import { useTheme } from '@/hooks/use-theme'
 
 function EditPage() {
   const { aid } = useParams()
-  const { user } = useFirebase()
+  const { userFirebase } = useFirebase()
   const { createTx } = useArweave()
   const { createArticle, getArticle } = useApi()
   const { editor } = useEditorLifetime(true)
@@ -92,7 +92,7 @@ function EditPage() {
         </ButtonGroupItem>
         <ButtonGroupItem id="publish" iconLeading={ArrowBlockUp} onClick={async () => {
           const json = editor?.getJSON()
-          await createArticle(user?.uid ?? '', title, JSON.stringify(json))
+          await createArticle(userFirebase?.uid ?? '', title, JSON.stringify(json))
         }}>
           Publish
         </ButtonGroupItem>

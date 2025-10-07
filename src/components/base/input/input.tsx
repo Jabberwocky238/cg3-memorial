@@ -237,8 +237,11 @@ export const Input = ({
     tooltipClassName,
     ...props
 }: InputProps) => {
+    // 确保无障碍访问：如果没有label，使用placeholder或提供默认的aria-label
+    const ariaLabel = !label ? (placeholder || "输入框") : undefined;
+    
     return (
-        <TextField aria-label={!label ? placeholder : undefined} {...props} className={className}>
+        <TextField aria-label={ariaLabel} {...props} className={className}>
             {({ isRequired, isInvalid }) => (
                 <>
                     {label && <Label isRequired={hideRequiredIndicator ? !hideRequiredIndicator : isRequired}>{label}</Label>}

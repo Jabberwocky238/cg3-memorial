@@ -1,17 +1,23 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore/lite';
-import { OAuthCredential, updateProfile, onAuthStateChanged, type Auth, type User, sendEmailVerification, browserLocalPersistence, setPersistence } from "firebase/auth"
+import { OAuthCredential, updateProfile, onAuthStateChanged, type Auth, type User, sendEmailVerification, browserLocalPersistence, setPersistence, type UserInfo } from "firebase/auth"
 import { createContext, useContext, useEffect, useRef, useState } from "react"
 import {
     getAuth,
     signOut,
     GoogleAuthProvider,
 } from 'firebase/auth';
-import { emailSignIn, emailSignUp, googleSignIn, getUserMetaInfo, updateUserMetaInfo, getSecretArweaveKey, setSecretArweaveKey } from './use-firebase-inner';
-import type { JWKInterface } from 'arweave/web/lib/wallet';
+import {
+    emailSignIn, emailSignUp, googleSignIn,
+    getFirebaseUser,
+    setFirebaseUser,
+    setFirebaseSecret,
+    getFirebasePublic,
+    setFirebasePublic,
+    getFirebaseSecret,
+} from './use-firebase-inner';
 import { LoadingPage } from './use-theme';
 import { useNavigate } from 'react-router-dom';
-import { useApi } from './use-backend';
 
 export const DEFAULT_AVATAR = "https://cdn4.iconfinder.com/data/icons/glyphs/24/icons_user-1024.png"
 
@@ -29,36 +35,24 @@ interface UserContextType {
     loading: boolean
 
     auth: Auth | null
-    user: UserMetaInfo | null
-    userCashier: UserCashier | null
-    setUserMeta: (userMeta: UserMetaInfo | null) => Promise<void>
-    getUserMeta: (uid: string) => Promise<UserMetaInfo | null>
-    updateUserMeta: (uid: string, userMeta: UserMetaInfo) => Promise<void>
+    userFirebase: User | null
 
+    setUserFirebase: (uid: string, userFirebase: {
+        displayName?: string
+        photoURL?: string
+    }) => Promise<void>
+    getUserFirebase: (uid: string) => Promise<UserInfo | null>
+
+    // Auth
     emailSignIn: (email: string, password: string) => Promise<{ user: User }>
     emailSignUp: (email: string, password: string) => Promise<{ user: User }>
     googleSignIn: () => Promise<{ user: User, credential: OAuthCredential | null }>
     signOut: () => Promise<void>
 
-    getSecretArweaveKey: (uid: string) => Promise<JWKInterface | null>
-    setSecretArweaveKey: (uid: string, key: JWKInterface) => Promise<void>
-}
-
-export interface UserMetaInfo {
-    uid: string
-    displayName: string
-    email: string
-    photoURL: string
-    arweaveAddress?: string
-    solanaAddress?: string
-}
-
-export interface UserCashier {
-    uid_firebase: string
-    balance_usd: number
-    misc: string
-    created_at: string
-    updated_at: string
+    getFirebaseSecret: (uid: string) => Promise<Record<string, unknown> | null>
+    setFirebaseSecret: (uid: string, data: Record<string, unknown>) => Promise<void>
+    getFirebasePublic: (uid: string) => Promise<Record<string, unknown> | null>
+    setFirebasePublic: (uid: string, data: Record<string, unknown>) => Promise<void>
 }
 
 const FirebaseContext = createContext<UserContextType | null>(null)
@@ -67,11 +61,9 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
     const appRef = useRef<FirebaseApp | null>(null)
     const dbRef = useRef<Firestore | null>(null)
     const authRef = useRef<Auth | null>(null)
-    const [userMeta, setUserMeta] = useState<UserMetaInfo | null>(null)
-    const [userCashier, setUserCashier] = useState<UserCashier | null>(null)
+
     const googleProvider = new GoogleAuthProvider();
     const navigate = useNavigate()
-    const { loadThisUserAccount } = useApi()
 
     const [loading, setLoading] = useState(true)
     const [initing, setIniting] = useState(true)
@@ -96,30 +88,24 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
     const _signOut = async () => {
         await signOut(authRef.current!)
     }
-    const _getUserMeta = async (uid: string) => {
-        return await getUserMetaInfo(dbRef.current!, uid)
+    const _getUserFirebase = async (uid: string) => {
+        return await getFirebaseUser(dbRef.current!, uid)
     }
-    const _updateUserMeta = async (uid: string, userMeta: UserMetaInfo) => {
-        await updateUserMetaInfo(dbRef.current!, uid, userMeta)
-    }
-    const _getSecretArweaveKey = async (uid: string) => {
-        return await getSecretArweaveKey(dbRef.current!, uid)
-    }
-    const _setSecretArweaveKey = async (uid: string, key: JWKInterface) => {
-        await setSecretArweaveKey(dbRef.current!, uid, key)
+    const _setUserFirebase = async (uid: string, userFirebase: {
+        displayName?: string
+        photoURL?: string
+    }) => {
+        const currentUser = authRef.current!.currentUser
+        if (!currentUser) throw new Error('用户未登录')
+        const obj = {
+            email: currentUser.email,
+            displayName: userFirebase.displayName || currentUser.displayName || `user-${uid.slice(0, 4)}`,
+            photoURL: userFirebase.photoURL || currentUser.photoURL || DEFAULT_AVATAR,
+        }
+        await updateProfile(currentUser, obj)
+        await setFirebaseUser(dbRef.current!, uid, obj)
     }
 
-    const _setUserMeta = async (userMeta: UserMetaInfo | null) => {
-        setUserMeta(userMeta)
-        if (userMeta) {
-            console.log('setUserMeta', userMeta)
-            await _updateUserMeta(userMeta.uid, userMeta)
-            await updateProfile(authRef.current!.currentUser!, {
-                displayName: userMeta.displayName || `user-${userMeta.uid.slice(0, 4)}`,
-                photoURL: userMeta.photoURL || DEFAULT_AVATAR,
-            })
-        }
-    }
     const _emailSignIn = async (email: string, password: string) => {
         const { user } = await emailSignIn(authRef.current!, email, password)
         await authRef.current?.currentUser?.reload()
@@ -128,12 +114,7 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
             await signOut(authRef.current!);
             throw new Error('邮箱未验证，请先完成邮箱验证，已发送验证邮件')
         }
-        _setUserMeta({
-            uid: user.uid,
-            displayName: user.displayName || `user-${user.uid.slice(0, 4)}`,
-            email: user.email || '',
-            photoURL: user.photoURL || DEFAULT_AVATAR,
-        })
+        await _setUserFirebase(user.uid, {});
         await navigate('/')
         return { user }
     }
@@ -145,35 +126,11 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
             setLoading(true)
             if (u) {
                 if (u.emailVerified !== true) {
-                    setUserMeta(null)
                     setLoading(false)
                     await navigate('/auth#login')
                     return
                 }
-                const userMeta = await _getUserMeta(u.uid)
-                if (!userMeta) {
-                    // 新用户
-                    setUserMeta({
-                        uid: u.uid,
-                        displayName: u.displayName || `user-${u.uid.slice(0, 4)}`,
-                        email: u.email || '',
-                        photoURL: u.photoURL || DEFAULT_AVATAR,
-                    })
-                } else {
-                    // 老用户
-                    setUserMeta({
-                        uid: u.uid,
-                        displayName: u.displayName || userMeta.displayName,
-                        email: u.email || userMeta.email,
-                        photoURL: u.photoURL || userMeta.photoURL,
-                    })
-                }
-                const idToken = await u.getIdToken(true)
-                const userCashier = await loadThisUserAccount(idToken)
-                console.log('userCashier', userCashier)
-                setUserCashier(userCashier)
-            } else {
-                setUserMeta(null)
+                _setUserFirebase(u.uid, {})
             }
             setLoading(false)
         })
@@ -189,19 +146,27 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
             loading,
 
             auth: authRef.current,
-            user: userMeta,
-            userCashier: userCashier,
-            setUserMeta: _setUserMeta,
-            getUserMeta: _getUserMeta,
-            updateUserMeta: _updateUserMeta,
+            userFirebase: authRef.current?.currentUser || null,
+            setUserFirebase: _setUserFirebase,
+            getUserFirebase: _getUserFirebase,
 
             emailSignIn: _emailSignIn,
             emailSignUp: _emailSignUp,
             googleSignIn: _googleSignIn,
             signOut: _signOut,
 
-            getSecretArweaveKey: _getSecretArweaveKey,
-            setSecretArweaveKey: _setSecretArweaveKey,
+            getFirebaseSecret: async (uid: string) => {
+                return await getFirebaseSecret(dbRef.current!, uid)
+            },
+            setFirebaseSecret: async (uid: string, data: Record<string, unknown>) => {
+                await setFirebaseSecret(dbRef.current!, uid, data)
+            },
+            getFirebasePublic: async (uid: string) => {
+                return await getFirebasePublic(dbRef.current!, uid)
+            },
+            setFirebasePublic: async (uid: string, key: Record<string, unknown>) => {
+                await setFirebasePublic(dbRef.current!, uid, key)
+            },
         }}>
             {/* <Profiler id="FirebaseProvider" onRender={(ID, phase, actualDuration, baseDuration, startTime, commitTime) => {
                 console.log({ ID, phase, actualDuration, baseDuration, startTime, commitTime })

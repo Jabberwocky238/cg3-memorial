@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApi, type Article } from '@/hooks/use-backend';
-import { useFirebase, type UserMetaInfo } from '@/hooks/use-firebase';
+import { useFirebase } from '@/hooks/use-firebase';
 import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group';
 import { Button } from '@/components/base/buttons/button';
 import { ArrowLeft, Edit03 } from '@untitledui/icons';
 import { useEditorLifetime } from '@/hooks/use-editor-lifetime';
 import { EditorContent } from '@tiptap/react';
 import { useAppState } from '@/hooks/use-app-state';
+import type { UserInfo } from 'firebase/auth';
 
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
@@ -15,9 +16,9 @@ export default function Article() {
     const { getArticle } = useApi();
     const { editor } = useEditorLifetime(false);
     const { LOG_append, LOG_clear, setError } = useAppState();
-    const [author, setAuthor] = useState<UserMetaInfo | null>(null);
+    const [author, setAuthor] = useState<UserInfo | null>(null);
     const [article, setArticle] = useState<Article | null>(null);
-    const { user, getUserMeta } = useFirebase();
+    const { userFirebase, getUserFirebase } = useFirebase();
 
     const loadArticleData = async () => {
         if (!aid) {
@@ -29,7 +30,7 @@ export default function Article() {
         }
         if (result.data) {
             console.log('Article: 文章数据加载成功', result.data);
-            const userInfo = await getUserMeta(result.data.uid);
+            const userInfo = await getUserFirebase(result.data.uid);
             setAuthor(userInfo);
             setArticle(result.data);
             console.log('Article: 文章数据和用户信息加载完成');
@@ -48,7 +49,7 @@ export default function Article() {
         } finally {
             LOG_clear();
         }
-    }, [aid, getArticle, getUserMeta]);
+    }, [aid, getArticle, getUserFirebase]);
 
     const loadEditorContent = async () => {
         if (!editor || !article) return
@@ -101,7 +102,7 @@ export default function Article() {
                         </p>
                         <p className='text-sm'>文章 ID: {article?.aid}</p>
                     </div>
-                    {user && user?.uid === article?.uid && (
+                    {userFirebase && userFirebase?.uid === article?.uid && (
                         <Button iconLeading={Edit03} color='tertiary' onClick={() => navigate(`/edit/${article?.aid}`)}>
                             编辑
                         </Button>

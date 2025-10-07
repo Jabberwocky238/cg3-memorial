@@ -16,7 +16,7 @@ import { Button } from "@/components/base/buttons/button";
 import { useTheme } from "@/hooks/use-theme";
 import { MoonStarIcon } from "@/components/tiptap-icons/moon-star-icon";
 import { SunIcon } from "@/components/tiptap-icons/sun-icon";
-import type { UserMetaInfo } from "@/hooks/use-firebase";
+import type { UserInfo } from "firebase/auth";
 
 export type NavItem = {
     /** Label text for the nav item. */
@@ -58,7 +58,7 @@ interface HeaderNavigationBaseProps {
     /** Whether to hide the bottom border. */
     hideBorder?: boolean;
     /** External user info to control avatar/login UI. */
-    user?: UserMetaInfo | null;
+    user?: UserInfo | null;
 }
 
 export const HeaderNavigationBase = ({
@@ -206,7 +206,7 @@ export const HeaderNavigationBase = ({
                                                 )
                                             }
                                         >
-                                            <Avatar alt={user.displayName} src={user.photoURL} size="md" />
+                                            <Avatar alt={user.displayName!} src={user.photoURL!} size="md" />
                                         </AriaButton>
                                         <Popover
                                             placement="bottom right"

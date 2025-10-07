@@ -20,6 +20,7 @@ import { Avatar } from './components/base/avatar/avatar'
 import { Popover } from 'react-aria-components'
 import { NavItemButton } from './components/application/app-navigation/base-components/nav-item-button'
 import { Button as AriaButton } from 'react-aria-components'
+import { CashierProvider } from './hooks/use-cashier'
 
 const navItems = [
 	{ label: 'Home', href: '/' },
@@ -66,7 +67,9 @@ export default function Layout() {
 			<main className={`flex-1 `}>
 				<AppStateProvider>
 					<ArweaveProvider>
-						<Outlet />
+						<CashierProvider>
+							<Outlet />
+						</CashierProvider>
 					</ArweaveProvider>
 				</AppStateProvider>
 			</main>
@@ -77,7 +80,7 @@ export default function Layout() {
 const HeaderNavigation = () => {
 	const items = useItemsWithCurrent()
 	const navigate = useNavigate()
-	const { user } = useFirebase()
+	const { userFirebase: user } = useFirebase()
 	const actionItems = actions;
 	const { theme, setTheme } = useTheme()
 	const showSecondaryNav = false;
@@ -189,7 +192,7 @@ const HeaderNavigation = () => {
 												)
 											}
 										>
-											<Avatar alt={user.displayName} src={user.photoURL} size="md" />
+											<Avatar alt={user.displayName!} src={user.photoURL!} size="md" />
 										</AriaButton>
 										<Popover
 											placement="bottom right"

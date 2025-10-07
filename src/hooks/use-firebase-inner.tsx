@@ -1,5 +1,4 @@
 import { getDoc, doc, setDoc, updateDoc, Firestore } from 'firebase/firestore/lite';
-import type { JWKInterface } from 'arweave/node/lib/wallet';
 import {
     type Auth,
     signInWithEmailAndPassword,
@@ -12,9 +11,8 @@ import {
     sendEmailVerification,
     fetchSignInMethodsForEmail,
     signOut,
+    type UserInfo,
 } from 'firebase/auth';
-import { type UserMetaInfo } from './use-firebase';
-
 
 async function emailSignIn(auth: Auth, email: string, password: string) {
     const result: UserCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -45,74 +43,59 @@ export {
     googleSignIn,
 }
 
-/// ##################### User Meta #########################
-
-async function getUserMetaInfo(db: Firestore, uid: string): Promise<UserMetaInfo | null> {
-    const userDocRef = doc(db, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-        return userDoc.data() as UserMetaInfo
-    }
-    return null
-}
-
-async function updateUserMetaInfo(db: Firestore, uid: string, data: Record<string, any>) {
-    const userDocRef = doc(db, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-        await setDoc(userDocRef, data);
-        return;
-    }
-    await updateDoc(userDocRef, data);
-}
-
-export {
-    getUserMetaInfo,
-    updateUserMetaInfo,
-}
-
 /// ##################### Arweave #########################
 
-function parseArweaveKey(key: Record<string, unknown>): JWKInterface | null {
-    if (!key) {
-        return null
-    }
-    const COMPONENTS = ['e', 'n', 'd', 'p', 'q', 'dp', 'dq', 'qi']
-    const components = COMPONENTS.map(component => key[component])
-    if (components.some(component => component === undefined)) {
-        return null
-    }
-    return {
-        kty: key.kty,
-        e: key.e,
-        n: key.n,
-
-        d: key.d,
-        p: key.p,
-        q: key.q,
-        dp: key.dp,
-        dq: key.dq,
-        qi: key.qi,
-    } as JWKInterface
-}
-
-async function getSecretArweaveKey(db: Firestore, uid: string): Promise<JWKInterface | null> {
-    console.log(uid)
-    const userDocRef = doc(db, 'secrets', uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-        return parseArweaveKey(userDoc.data() as Record<string, unknown>)
+async function META_getFirebase<T>(db: Firestore, store: string, uid: string): Promise<T | null> {
+    const objRef = doc(db, store, uid);
+    const obj = await getDoc(objRef);
+    if (obj.exists()) {
+        return obj.data() as T
     }
     return null
 }
 
-async function setSecretArweaveKey(db: Firestore, uid: string, key: JWKInterface) {
-    const userDocRef = doc(db, 'secrets', uid);
-    await setDoc(userDocRef, key);
+async function META_updateFirebase<T extends Record<string, unknown>>(db: Firestore, store: string, uid: string, data: T) {
+    const objRef = doc(db, store, uid);
+    const obj = await getDoc(objRef);
+    if (!obj.exists()) {
+        await setDoc(objRef, data);
+        return;
+    }
+    await updateDoc(objRef, data);
+}
+
+async function getFirebaseUser(db: Firestore, uid: string): Promise<UserInfo | null> {
+    return await META_getFirebase<UserInfo>(db, 'users', uid)
+}
+
+async function setFirebaseUser(db: Firestore, uid: string, data: {
+    displayName?: string
+    photoURL?: string
+}) {
+    return await META_updateFirebase<Record<string, any>>(db, 'users', uid, data)
+}
+
+async function getFirebaseSecret(db: Firestore, uid: string): Promise<Record<string, unknown> | null> {
+    return await META_getFirebase<Record<string, unknown>>(db, 'secrets', uid)
+}
+
+async function setFirebaseSecret(db: Firestore, uid: string, data: Record<string, unknown>) {
+    return await META_updateFirebase<Record<string, unknown>>(db, 'secrets', uid, data)
+}
+
+async function getFirebasePublic(db: Firestore, uid: string): Promise<Record<string, unknown> | null> {
+    return await META_getFirebase<Record<string, unknown>>(db, 'public', uid)
+}
+
+async function setFirebasePublic(db: Firestore, uid: string, data: Record<string, unknown>) {
+    return await META_updateFirebase<Record<string, unknown>>(db, 'public', uid, data)
 }
 
 export {
-    getSecretArweaveKey,
-    setSecretArweaveKey,
+    getFirebaseUser,
+    setFirebaseUser,
+    getFirebaseSecret,
+    setFirebaseSecret,
+    getFirebasePublic,
+    setFirebasePublic,
 }
-

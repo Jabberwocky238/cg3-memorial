@@ -3,15 +3,15 @@ import { useFirebase } from '../hooks/use-firebase'
 import { useTheme } from '../hooks/use-theme'
 
 export default function HomePage() {
-	const { signOut, user } = useFirebase()
+	const { signOut, userFirebase } = useFirebase()
 	const navigate = useNavigate()
 	return (
 		<div className="min-h-dvh grid place-items-center px-4">
 			<div className="w-full max-w-sm space-y-4 text-center">
 				<h1 className="text-xl font-semibold">首页</h1>
-				{user ? (
+				{userFirebase ? (
 					<div className="space-y-2">
-						<p className="text-sm">已登录：{user.email ?? user.displayName ?? user.uid}</p>
+						<p className="text-sm">已登录：{userFirebase.email ?? userFirebase.displayName ?? userFirebase.uid}</p>
 						<button
 							className="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium"
 							onClick={async () => {

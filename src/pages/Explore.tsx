@@ -3,17 +3,14 @@ import { useApi, type Article } from '@/hooks/use-backend';
 import { useFirebase } from '@/hooks/use-firebase';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '@/hooks/use-app-state';
+import type { UserInfo } from 'firebase/auth';
 
 interface ArticleWithUser extends Article {
-  userInfo?: {
-    displayName: string;
-    email: string;
-    photoURL: string;
-  };
+  userInfo?: UserInfo
 }
 
 export default function Explore() {
-  const { getUserMeta } = useFirebase();
+  const { getUserFirebase } = useFirebase();
   const { LOG_append, LOG_clear, setError } = useAppState();
   const [articles, setArticles] = useState<ArticleWithUser[]>([]);
   const { listArticles } = useApi();
@@ -29,7 +26,7 @@ export default function Explore() {
       const articlesWithUser = await Promise.all(
         result.data.map(async (article: Article) => {
           try {
-            const userInfo = await getUserMeta(article.uid);
+            const userInfo = await getUserFirebase(article.uid);
             return {
               ...article,
               userInfo: userInfo || undefined,
@@ -104,7 +101,7 @@ function ArticleItem({ article, onClick }: ArticleItemProps) {
           {article.userInfo?.photoURL ? (
             <img
               src={article.userInfo.photoURL}
-              alt={article.userInfo.displayName}
+              alt={article.userInfo.displayName!}
               className="w-10 h-10 rounded-full object-cover"
             />
           ) : (
