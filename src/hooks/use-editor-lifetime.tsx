@@ -2,7 +2,7 @@ import { useEditor } from "@tiptap/react"
 
 // 导入编辑器配置
 import { StarterKit } from "@tiptap/starter-kit"
-import { Image } from "@tiptap/extension-image"
+import { Image, type ImageOptions } from "@tiptap/extension-image"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { TextAlign } from "@tiptap/extension-text-align"
 import { Typography } from "@tiptap/extension-typography"
@@ -56,8 +56,21 @@ export function useEditorLifetime(editable: boolean = true) {
                 HTMLAttributes: {
                     class: "simple-editor-image",
                 },
+            } as Partial<ImageOptions>),
+            ImageUploadNode.configure({
+                upload: async (file: File, onProgress, signal) => {
+                   return await base64Image(file) as string
+                },
+                onSuccess: (url) => {
+                    console.log('图片上传成功:', url);
+                },
+                onError: (error) => {
+                    console.error('图片上传失败:', error);
+                },
+                maxSize: 5 * 1024 * 1024,
+                limit: 1,
+                accept: 'image/*',
             }),
-            ImageUploadNode,
             TaskList,
             TaskItem.configure({
                 nested: true,
@@ -80,4 +93,17 @@ export function useEditorLifetime(editable: boolean = true) {
     }, [editor, editable, location])
 
     return { editor: memoEditor }
+}
+
+async function base64Image(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+            resolve(reader.result as string)
+        }
+        reader.onerror = () => {
+            reject(new Error('Failed to read file'))
+        }
+        reader.readAsDataURL(file)
+    })
 }

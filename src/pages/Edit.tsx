@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useFirebase } from '@/hooks/use-firebase'
 import { useApi } from '@/hooks/use-backend'
 import { Archive, ArrowBlockUp, Edit03, Trash01 } from "@untitledui/icons";
@@ -25,7 +25,8 @@ function EditPage() {
   const [title, setTitle] = useState('Untitled')
   const [contentLoaded, setContentLoaded] = useState(false)
   const { theme } = useTheme()
-
+  const navigate = useNavigate()
+    
   const loadArticle = async () => {
     if (!aid || !editor || contentLoaded) return
     console.log('Edit: 开始加载文章', aid)
@@ -40,13 +41,38 @@ function EditPage() {
     }
   }
 
+  const checkBelongToUser = async (aid: string) => {
+    if (!userFirebase) return false // 如果用户未登录，需要登陆后才能编辑
+    const result = await getArticle(aid)
+    if (result.data) {
+      return result.data.uid === userFirebase.uid
+    }
+  }
+
   useEffect(() => {
     try {
+      if (!aid || aid === 'new') return // 如果文章 ID 为空，则认为创建新文章
       loadArticle()
     } catch (error) {
       console.error('Edit: 加载文章失败', error)
     }
   }, [aid, editor, contentLoaded])
+
+  useEffect(() => {
+    try {
+      if (!aid || aid === 'new') return // 如果文章 ID 为空，则认为创建新文章
+      console.log('Edit: 检查文章是否属于用户', aid)
+      checkBelongToUser(aid).then(isBelongToUser => {
+        if (!isBelongToUser) {
+          console.log('Edit: 文章不属于用户', aid)
+          navigate('/article/' + aid)
+        }
+      })
+    } catch (error) {
+      console.error('Edit: 检查文章是否属于用户失败', error)
+      navigate('/article/' + aid)
+    }
+  }, [aid])
 
   useEffect(() => {
     if (!editor) return

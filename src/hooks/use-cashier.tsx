@@ -2,6 +2,40 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { useFirebase } from "./use-firebase"
 import type { User } from "firebase/auth"
 
+
+const CASHIER_URL = "http://localhost:8787"
+// const CASHIER_URL = "https://cashier.permane.world"
+
+async function loadThisUserAccount(jwt: string) {
+    const result = await fetch(CASHIER_URL + "/my_account", {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwt}`
+        }
+    })
+    if (!result.ok) {
+        throw new Error("Failed to load this user account")
+    }
+    const data = await result.json() as UserCashier
+    return data
+}
+
+async function transfer(jwt: string, amount: number, toUid: string, fromUid: string) {
+    const result = await fetch(CASHIER_URL + "/transfer", {
+        method: "POST",
+        body: JSON.stringify({
+            "amount": amount,
+            "to_uid": toUid,
+            "from_uid": fromUid
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwt}`
+        }
+    })
+    return await result.text()
+}
+
 export interface UserCashier {
     uid_firebase: string
     balance_usd: number
@@ -19,6 +53,7 @@ interface CashierContextType {
     initing: boolean
     error: string | null
     userCashier: UserCashier | null
+    transfer: (amount: number, toUid: string) => Promise<void>
 }
 
 const CashierContext = createContext<CashierContextType | null>(null)
@@ -27,7 +62,7 @@ export function CashierProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true)
     const [initing, setIniting] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const { userFirebase: user, loading: fbloading, auth } = useFirebase()
+    const { userFirebase, loading: fbloading, auth } = useFirebase()
 
     const [innerSecret, setInnerSecret] = useState<UserCashierSecret | null>(null)
 
@@ -37,6 +72,7 @@ export function CashierProvider({ children }: { children: React.ReactNode }) {
         const userCashier = await loadThisUserAccount(idToken)
         setInnerSecret({ userCashier })
         setLoading(false)
+        return userCashier
     }
 
     useEffect(() => {
@@ -44,12 +80,14 @@ export function CashierProvider({ children }: { children: React.ReactNode }) {
             console.log('Cashier hook: fbloading')
             return
         }
-        if (!auth || !user) {
+        if (!auth || !userFirebase) {
             console.log('Cashier hook: auth is null')
             return
         }
         try {
-            tryLoadUserCashier(user)
+            tryLoadUserCashier(userFirebase).then(userCashier => {
+                console.log('Cashier hook: userCashier', userCashier)
+            })
         } catch (error) {
             console.error('Cashier hook: tryLoadUserCashier failed: ' + error)
             setError('Cashier hook: tryLoadUserCashier failed: ' + error)
@@ -64,7 +102,23 @@ export function CashierProvider({ children }: { children: React.ReactNode }) {
             loading,
             initing,
             error,
-            userCashier: innerSecret?.userCashier || null,
+            userCashier: innerSecret?.userCashier ?? null,
+            transfer: async (amount: number, toUid: string) => {
+                if (!innerSecret?.userCashier || !userFirebase) {
+                    throw new Error("User cashier not found")
+                }
+                if (toUid === userFirebase.uid) {
+                    throw new Error("You cannot transfer money to yourself")
+                }
+                if (amount <= 0) {
+                    throw new Error("Amount must be greater than 0")
+                }
+                if (amount > innerSecret.userCashier.balance_usd) {
+                    throw new Error("Insufficient balance" + amount + "for" + toUid + "balance is" + innerSecret.userCashier.balance_usd)
+                }
+                const idToken = await userFirebase.getIdToken()
+                await transfer(idToken, amount, toUid, userFirebase.uid)
+            },
         }}>
             {children}
         </CashierContext.Provider>
@@ -77,21 +131,4 @@ export function useCashier() {
         throw new Error('useCashier must be used within a CashierProvider')
     }
     return context
-}
-
-// const CASHIER_URL = "http://localhost:8787" 
-const CASHIER_URL = "https://cashier.permane.world"
-
-async function loadThisUserAccount(jwt: string) {
-    const result = await fetch(CASHIER_URL + "/my_account", {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwt}`
-        }
-    })
-    if (!result.ok) {
-        throw new Error("Failed to load this user account")
-    }
-    const data = await result.json() as UserCashier
-    return data
 }

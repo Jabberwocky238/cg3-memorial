@@ -14,7 +14,9 @@ import { LoadingIndicator } from '@/components/application/loading-indicator/loa
 const copyToClipboard = async (text: string, type: string) => {
     try {
         await navigator.clipboard.writeText(text)
+        alert('复制成功')
     } catch (error) {
+        alert('复制失败:' + error)
         console.error('复制失败:', error)
     }
 }
@@ -75,7 +77,7 @@ export default function Profile() {
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium ">钱包余额</Label>
-                                    <p className="mt-1 text-sm ">{userCashier?.balance_usd || '未获取到'}</p>
+                                    <p className="mt-1 text-sm ">{userCashier?.balance_usd ?? '未获取到'}</p>
                                 </div>
                             </div>
 
