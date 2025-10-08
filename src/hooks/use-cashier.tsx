@@ -3,8 +3,8 @@ import { useFirebase } from "./use-firebase"
 import type { User } from "firebase/auth"
 
 
-const CASHIER_URL = "http://localhost:8787"
-// const CASHIER_URL = "https://cashier.permane.world"
+// const CASHIER_URL = "http://localhost:8787"
+const CASHIER_URL = "https://cashier.permane.world"
 
 async function loadThisUserAccount(jwt: string) {
     const result = await fetch(CASHIER_URL + "/my_account", {
