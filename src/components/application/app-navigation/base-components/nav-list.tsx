@@ -2,6 +2,8 @@ import { useState } from "react";
 import { cx } from "@/utils/cx";
 import type { NavItemDividerType, NavItemType } from "../config";
 import { NavItemBase } from "./nav-item";
+import { useNavigate } from "react-router-dom";
+import type { OverlayTriggerState } from "react-aria-components";
 
 interface NavListProps {
     /** URL of the currently active item. */
@@ -9,13 +11,15 @@ interface NavListProps {
     /** Additional CSS classes to apply to the list. */
     className?: string;
     /** List of items to display. */
-    items: (NavItemType | NavItemDividerType)[];
+    items: (NavItemType | NavItemDividerType)[];    
+    state?: OverlayTriggerState;
 }
 
-export const NavList = ({ activeUrl, items, className }: NavListProps) => {
+export const NavList = ({ activeUrl, items, className, state }: NavListProps) => {
     const [open, setOpen] = useState(false);
     const activeItem = items.find((item) => item.href === activeUrl || item.items?.some((subItem) => subItem.href === activeUrl));
     const [currentItem, setCurrentItem] = useState(activeItem);
+    const navigate = useNavigate()
 
     return (
         <ul className={cx("mt-4 flex flex-col px-2 lg:px-4", className)}>
@@ -48,7 +52,14 @@ export const NavList = ({ activeUrl, items, className }: NavListProps) => {
                                     {item.items.map((childItem) => (
                                         <li key={childItem.label} className="py-0.5">
                                             <NavItemBase
-                                                href={childItem.href}
+                                                // href={childItem.href}
+                                                href="#"
+                                                onClick={() => {
+                                                    if (childItem.href) {
+                                                        navigate(childItem.href)
+                                                        state?.close()
+                                                    }
+                                                }}
                                                 badge={childItem.badge}
                                                 type="collapsible-child"
                                                 current={activeUrl === childItem.href}
@@ -69,7 +80,14 @@ export const NavList = ({ activeUrl, items, className }: NavListProps) => {
                             type="link"
                             badge={item.badge}
                             icon={item.icon}
-                            href={item.href}
+                            // href={item.href}
+                            href="#"
+                            onClick={() => {
+                                if (item.href) {
+                                    navigate(item.href)
+                                    state?.close()
+                                }
+                            }}
                             current={currentItem?.href === item.href}
                             open={open && currentItem?.href === item.href}
                         >

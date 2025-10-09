@@ -3,13 +3,14 @@ export interface Articles {
   uid: string
   title: string
   content: string
+  tags: string
   created_at: string
   updated_at: string
 }
 
 export async function listArticles(env: Env): Promise<Articles[]> {
   const { results } = await env.DB.prepare(
-    `SELECT aid, uid, title, content, created_at, updated_at
+    `SELECT aid, uid, title, content, tags, created_at, updated_at
      FROM articles
      ORDER BY created_at DESC`
   ).all<Articles>()
@@ -18,7 +19,7 @@ export async function listArticles(env: Env): Promise<Articles[]> {
 
 export async function getArticleById(env: Env, aid: string): Promise<Articles | null> {
   const row = await env.DB.prepare(
-    `SELECT aid, uid, title, content, created_at, updated_at
+    `SELECT aid, uid, title, content, tags, created_at, updated_at
      FROM articles
      WHERE aid = ?`
   ).bind(aid).first<Articles>()
@@ -28,19 +29,19 @@ export async function getArticleById(env: Env, aid: string): Promise<Articles | 
   return row ?? null
 }
 
-export async function createArticle(env: Env, uid: string, title: string, content: string): Promise<Articles> {
+export async function createArticle(env: Env, uid: string, title: string, content: string, tags: string): Promise<Articles> {
   const now = new Date().toISOString()
   const aid = crypto.randomUUID()
   await env.DB.prepare(
-    `INSERT INTO articles (aid, uid, title, content, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).bind(aid, uid, title, content, now, now).run()
+    `INSERT INTO articles (aid, uid, title, content, tags, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).bind(aid, uid, title, content, tags, now, now).run()
   const created = await getArticleById(env, aid)
   if (!created) throw new Error('Failed to insert article')
   return created
 }
 
-export async function updateArticle(env: Env, aid: string, title?: string, content?: string): Promise<Articles | null> {
+export async function updateArticle(env: Env, aid: string, title?: string, content?: string, tags?: string): Promise<Articles | null> {
   if (title === undefined && content === undefined) {
     return await getArticleById(env, aid)
   }
@@ -53,6 +54,10 @@ export async function updateArticle(env: Env, aid: string, title?: string, conte
   if (content !== undefined) {
     fields.push('content = ?')
     binds.push(content)
+  }
+  if (tags !== undefined) {
+    fields.push('tags = ?')
+    binds.push(tags)
   }
   const now = new Date().toISOString()
   fields.push('updated_at = ?')

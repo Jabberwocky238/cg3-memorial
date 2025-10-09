@@ -1,5 +1,6 @@
-import type { FC, PropsWithChildren } from "react";
+import { createContext, type DOMAttributes, type FC, type PropsWithChildren, type ReactElement } from "react";
 import { Archive, X as CloseIcon, Menu02, Trash01 } from "@untitledui/icons";
+import type { FocusableElement } from "@react-types/shared";
 import {
     Button as AriaButton,
     Dialog as AriaDialog,
@@ -7,13 +8,20 @@ import {
     Modal as AriaModal,
     ModalOverlay as AriaModalOverlay,
     type ButtonProps,
+    type OverlayTriggerState,
+    Pressable,
 } from "react-aria-components";
 import { UntitledLogo } from "@@/foundations/logo/untitledui-logo";
 import { cx } from "@/utils/cx";
 import { Button } from "@/components/base/buttons/button";
 import { ButtonUtility } from "@/components/base/buttons/button-utility";
+import { ButtonGroup, ButtonGroupItem } from "@/components/base/button-group/button-group";
 
-export const MobileNavigationHeader = ({ children }: PropsWithChildren) => {
+interface MobileNavigationHeaderProps {
+    children: (state: OverlayTriggerState) => React.ReactNode
+}
+
+export const MobileNavigationHeader = ({ children }: MobileNavigationHeaderProps) => {
     return (
         <AriaDialogTrigger>
             <header className="flex h-16 items-center justify-between border-b border-secondary bg-primary py-3 pr-2 pl-4 lg:hidden">
@@ -49,7 +57,9 @@ export const MobileNavigationHeader = ({ children }: PropsWithChildren) => {
                         </AriaButton>
 
                         <AriaModal className="w-full cursor-auto will-change-transform">
-                            <AriaDialog className="h-dvh outline-hidden focus:outline-hidden">{children}</AriaDialog>
+                            <AriaDialog className="h-dvh outline-hidden focus:outline-hidden">
+                                {children(state)}
+                            </AriaDialog>
                         </AriaModal>
                     </>
                 )}
@@ -119,19 +129,14 @@ export const MobilePortal = ({ children, hiddenClass, OpenIcon, CloseIcon }: Mob
 
 interface GeneralPortalProps {
     children: (close: () => void) => React.ReactNode
-    trigger: React.ReactNode
+    trigger: ReactElement<DOMAttributes<FocusableElement>, string>
 }
 
 export const GeneralPortal = ({ children, trigger }: GeneralPortalProps) => {
     return (
-        <AriaDialogTrigger>
-            <AriaButton
-                aria-label="Expand navigation menu"
-                className="w-full"
-            >
-                {trigger}
-            </AriaButton>
-
+        <AriaDialogTrigger >
+            {/* <AriaButton>{trigger}</AriaButton> */}
+            <Pressable>{trigger}</Pressable>
             <AriaModalOverlay
                 isDismissable
                 className={({ isEntering, isExiting }) =>
@@ -145,7 +150,9 @@ export const GeneralPortal = ({ children, trigger }: GeneralPortalProps) => {
                 {({ state }) => (
                     <AriaModal
                         className="cursor-auto will-change-transform w-full h-full">
-                        <AriaDialog className="outline-hidden flex flex-col justify-center items-center w-full h-full">
+                        <AriaDialog
+                            className="outline-hidden flex flex-col justify-center items-center w-full h-full"
+                        >
                             {children(state.close)}
                         </AriaDialog>
                     </AriaModal>
@@ -155,7 +162,9 @@ export const GeneralPortal = ({ children, trigger }: GeneralPortalProps) => {
     );
 };
 
-interface ModalButtonProps extends PropsWithChildren {
+
+
+interface ModalButtonProps {
     isLoading?: boolean
     iconLeading?: FC<{ className?: string }>
     color?: "secondary" | "tertiary"
@@ -165,7 +174,7 @@ interface ModalButtonProps extends PropsWithChildren {
     onClick?: () => void
     forceRefresh?: boolean
 
-    children: React.ReactNode
+    children: React.ReactNode | ((close: () => void) => React.ReactNode)
     actions?: {
         label: string
         onClick: (close: () => void) => void | Promise<void>
@@ -197,51 +206,25 @@ export const ModalButton = ({ children, actions, ...otherProps }: ModalButtonPro
                         <ButtonUtility onClick={close} color="secondary"
                             size="sm" tooltip={tooltip} icon={CloseIcon} />
                     </header>
-                    {children}
-                    <footer className="flex justify-end">
-                        {actions?.map((action) => (
-                            <Button key={action.label} isLoading={false} showTextWhileLoading iconLeading={action.icon}
-                                color={action.color} size={action.size} onClick={() => {
-                                    action.onClick(close)
-                                }}
-                            >
-                                {action.label}
-                            </Button>
-                        ))}
-                    </footer>
+                    {typeof children === 'function' ? children(close) : children}
+                    {actions && <footer className="flex justify-end mt-4">
+                        <ButtonGroup>
+                            {actions?.map((action) => (
+                                <ButtonGroupItem
+                                    key={action.label}
+                                    iconLeading={action.icon}
+                                    onClick={() => {
+                                        action.onClick(close)
+                                    }}
+                                >
+                                    {action.label}
+                                </ButtonGroupItem>
+                            ))}
+                        </ButtonGroup>
+                    </footer>}
                 </div>
             )}
         </GeneralPortal>
     );
 };
 
-{/* <GeneralPortal
-trigger={
-  <Button
-    className="w-full"
-    isLoading={false} showTextWhileLoading iconLeading={Archive}
-    color="secondary" size="sm" onClick={handleLogHTML}
-  >
-    Log HTML
-  </Button>
-}>
-{(close) => (
-  <div className="bg-primary p-4 rounded-lg border border-secondary 
-  md:w-120 max-md:w-full max-h-full overflow-auto">
-    <header className="flex justify-between items-center">
-      <h2 className="text-lg font-bold">Log HTML</h2>
-      <ButtonUtility onClick={close} color="secondary" size="sm" tooltip="Delete" icon={Trash01} />
-    </header>
-    <pre className="p-4 rounded break-words whitespace-pre-wrap overflow-auto">
-      {JSON.stringify(editor?.getHTML(), null, 2)}
-    </pre>
-    <footer className="flex justify-end">
-      <Button isLoading={false} showTextWhileLoading iconLeading={Archive}
-        color="secondary" size="sm" onClick={close}
-      >
-        Close
-      </Button>
-    </footer>
-  </div>
-)}
-</GeneralPortal> */}

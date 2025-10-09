@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApi, type Article } from '@/hooks/use-backend';
 import { useFirebase } from '@/hooks/use-firebase';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '@/hooks/use-app-state';
 import type { UserInfo } from 'firebase/auth';
+import type { Content, JSONContent } from '@tiptap/react';
 
 interface ArticleWithUser extends Article {
   userInfo?: UserInfo
@@ -77,6 +78,12 @@ interface ArticleItemProps {
 }
 
 function ArticleItem({ article, onClick }: ArticleItemProps) {
+  const firstPicture = useMemo(() => {
+    const doc = JSON.parse(article?.content || '{}') as JSONContent;
+    const contents = doc.content as JSONContent[];
+    const image = contents.find((content) => content.type === 'image');
+    return image?.attrs?.src;
+  }, [article]);
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('zh-CN', {
       year: 'numeric',
@@ -92,8 +99,10 @@ function ArticleItem({ article, onClick }: ArticleItemProps) {
   }
 
   return (
-    <article key={article.aid} className="rounded-lg shadow-sm border border-gray-200 p-6 
-        hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
+    <article key={article.aid}
+      className="rounded-lg shadow-sm border border-gray-200 p-6 
+        hover:shadow-md transition-shadow cursor-pointer"
+      onClick={onClick}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           {article.userInfo?.photoURL ? (
@@ -120,12 +129,29 @@ function ArticleItem({ article, onClick }: ArticleItemProps) {
         </div>
       </div>
 
-      <h2 className="text-xl font-semibold mb-3 line-clamp-2">
-        {article.title}
-      </h2>
-
-      <div className="mb-4 line-clamp-3">
-        {article.content}
+      <div className="mb-4 line-clamp-3 flex items-center gap-2">
+        {firstPicture ? (
+          <>
+            <img
+              src={firstPicture}
+              alt="文章封面"
+              className="object-cover h-[100px] max-lg:h-[50px]"
+            />
+            <div className="flex-1 flex flex-col">
+              <h2 className="text-xl font-semibold mb-3 line-clamp-2">
+                {article.title}
+              </h2>
+              <pre className="text-sm  truncate">{article.content}</pre>
+              <pre className="text-sm truncate">tags:{article.tags}</pre>
+            </div>
+          </>
+        ) : (<div className="flex flex-col gap-2">
+          <h2 className="text-xl font-semibold mb-3 line-clamp-2">
+            {article.title}
+          </h2>
+          <pre className="text-sm truncate">{article.content}</pre>
+          <pre className="text-sm truncate">tags:{article.tags}</pre>
+        </div>)}
       </div>
 
       <div className="flex items-center justify-between text-sm">

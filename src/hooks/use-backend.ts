@@ -5,6 +5,7 @@ export interface Article {
   uid: string;
   title: string;
   content: string;
+  tags: string;
   created_at: string;
   updated_at: string;
 }
@@ -65,22 +66,24 @@ async function getArticle(aid: string): Promise<ApiResponse<Article>> {
 async function createArticle(
   uid: string,
   title: string,
-  content: string
+  content: string,
+  tags: string,
 ): Promise<ApiResponse<Article>> {
   return apiRequest<Article>('/articles', {
     method: 'POST',
-    body: JSON.stringify({ uid, title, content }),
+    body: JSON.stringify({ uid, title, content, tags }),
   });
 }
 
 async function updateArticle(
   aid: string,
   title?: string,
-  content?: string
+  content?: string,
+  tags?: string
 ): Promise<ApiResponse<Article>> {
   return apiRequest<Article>(`/articles/${encodeURIComponent(aid)}`, {
     method: 'PUT',
-    body: JSON.stringify({ title, content }),
+    body: JSON.stringify({ title, content, tags }),
   });
 }
 

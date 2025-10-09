@@ -58,6 +58,13 @@ interface CashierContextType {
 
 const CashierContext = createContext<CashierContextType | null>(null)
 
+export const ErrorCashier = {
+    UserCashierNotFound: new Error("User cashier not found"),
+    InvalidAmount: new Error("Invalid amount"),
+    InsufficientBalance: new Error("Insufficient balance"),
+    TransferFailed: new Error("Transfer failed"),
+}
+
 export function CashierProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true)
     const [initing, setIniting] = useState(true)
@@ -105,16 +112,16 @@ export function CashierProvider({ children }: { children: React.ReactNode }) {
             userCashier: innerSecret?.userCashier ?? null,
             transfer: async (amount: number, toUid: string) => {
                 if (!innerSecret?.userCashier || !userFirebase) {
-                    throw new Error("User cashier not found")
+                    throw ErrorCashier.UserCashierNotFound
                 }
                 if (toUid === userFirebase.uid) {
-                    throw new Error("You cannot transfer money to yourself")
+                    throw ErrorCashier.InvalidAmount
                 }
                 if (amount <= 0) {
-                    throw new Error("Amount must be greater than 0")
+                    throw ErrorCashier.InvalidAmount
                 }
                 if (amount > innerSecret.userCashier.balance_usd) {
-                    throw new Error("Insufficient balance" + amount + "for" + toUid + "balance is" + innerSecret.userCashier.balance_usd)
+                    throw ErrorCashier.InsufficientBalance
                 }
                 const idToken = await userFirebase.getIdToken()
                 await transfer(idToken, amount, toUid, userFirebase.uid)

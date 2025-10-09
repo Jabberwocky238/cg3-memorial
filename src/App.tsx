@@ -3,6 +3,7 @@ import { Route, Routes, BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from './hooks/use-theme'
 import { lazy } from 'react'
 import FirebaseProvider from './hooks/use-firebase'
+import { GlobalPortalProvider } from './hooks/use-app-state'
 
 const Layout = lazy(() => import('./Layout'))
 const HomePage = lazy(() => import('./pages/Home'))
@@ -42,7 +43,10 @@ function App() {
     <BrowserRouter>
       <ThemeProvider>
         <FirebaseProvider>
-          <AppRoutes />
+          {/* <AppRoutes /> */}
+          <GlobalPortalProvider>
+            <AppRoutes />
+          </GlobalPortalProvider>
         </FirebaseProvider>
       </ThemeProvider>
     </BrowserRouter>

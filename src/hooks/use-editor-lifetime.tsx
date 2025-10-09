@@ -1,4 +1,4 @@
-import { useEditor } from "@tiptap/react"
+import { Editor, useEditor } from "@tiptap/react"
 
 // 导入编辑器配置
 import { StarterKit } from "@tiptap/starter-kit"
@@ -80,19 +80,9 @@ export function useEditorLifetime(editable: boolean = true) {
         // onUpdate: () => {
         //     // 可以在这里添加更新逻辑
         // },
-    })
+    }, [editable, location])
 
-    const memoEditor = useMemo(() => {
-        if (!editor) return null
-        const isEditable = editor.isEditable
-        if (isEditable !== editable) {
-            editor.setEditable(editable, false)
-        }
-        editor.commands.setContent('')
-        return editor
-    }, [editor, editable, location])
-
-    return { editor: memoEditor }
+    return { editor }
 }
 
 async function base64Image(file: File): Promise<string> {

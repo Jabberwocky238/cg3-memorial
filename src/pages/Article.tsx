@@ -4,17 +4,18 @@ import { useApi, type Article } from '@/hooks/use-backend';
 import { useFirebase } from '@/hooks/use-firebase';
 import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group';
 import { Button } from '@/components/base/buttons/button';
-import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/button-group';
-import { ArrowLeft, Coins01, Edit03 } from '@untitledui/icons';
+import { Archive, ArrowBlockUp, ArrowLeft, Coins01, Edit03 } from '@untitledui/icons';
 import { useEditorLifetime } from '@/hooks/use-editor-lifetime';
-import { EditorContent } from '@tiptap/react';
-import { isUUID, useAppState } from '@/hooks/use-app-state';
+import { Editor, EditorContent } from '@tiptap/react';
+import { isUUID, useAppState, useGlobalPortal } from '@/hooks/use-app-state';
 import type { UserInfo } from 'firebase/auth';
-import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover, Input, Link } from "react-aria-components";
-import { cx } from '@/utils/cx';
+import { Input } from "react-aria-components";
 import { Label } from '@/components/base/input/label';
-import { useCashier } from '@/hooks/use-cashier';
+import { ErrorCashier, useCashier } from '@/hooks/use-cashier';
 import { useArweave } from '@/hooks/use-arweave';
+import { MobilePortal, ModalButton } from '@/components/application/app-navigation/base-components/mobile-header';
+import { CloseIcon } from '@/components/tiptap-icons/close-icon';
+import { ArticleMeta, ArticleMetaPanel } from '@/components/cg-ui/ArticleMeta';
 
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
@@ -27,7 +28,7 @@ export default function Article() {
     const { userFirebase, getUserFirebase } = useFirebase();
     const triggerRef = useRef<HTMLButtonElement>(null);
     const { transfer } = useCashier();
-    
+
     const loadArticleData = async () => {
         if (!aid) {
             throw new Error('文章 ID 无效');
@@ -60,7 +61,7 @@ export default function Article() {
         } finally {
             LOG_clear();
         }
-    }, [aid, getArticle, getUserFirebase]);
+    }, [aid]);
 
     const loadEditorContent = async () => {
         if (!editor || !article) return
@@ -100,51 +101,6 @@ export default function Article() {
     return (
         <div className="min-h-screen">
             <div className="py-8">
-                {/* 文章头部 */}
-                <ButtonGroup className="w-full mx-auto px-4 justify-center">
-                    <ArticleArweaveInfo pageId={article?.aid} />
-                    <ButtonGroupItem iconLeading={ArrowLeft} onClick={handleBack}>
-                        返回
-                    </ButtonGroupItem>
-                    <AriaDialogTrigger>
-                        <AriaButton
-                            ref={triggerRef}
-                            className="flex cursor-pointer items-center justify-center rounded-md p-1.5 text-fg-quaternary outline-focus-ring transition duration-100 ease-linear hover:bg-primary_hover hover:text-fg-quaternary_hover focus-visible:outline-2 focus-visible:outline-offset-2 pressed:bg-primary_hover pressed:text-fg-quaternary_hover"
-                        >
-                        <Coins01 className="size-4 shrink-0" />
-                        </AriaButton>
-                        <AriaPopover
-                            placement="bottom right"
-                            triggerRef={triggerRef}
-                            offset={8}
-                            className={({ isEntering, isExiting }) =>
-                                cx(
-                                    "origin-(--trigger-anchor-point) will-change-transform",
-                                    isEntering &&
-                                    "duration-150 ease-out animate-in fade-in placement-right:slide-in-from-left-0.5 placement-top:slide-in-from-bottom-0.5 placement-bottom:slide-in-from-top-0.5",
-                                    isExiting &&
-                                    "duration-100 ease-in animate-out fade-out placement-right:slide-out-to-left-0.5 placement-top:slide-out-to-bottom-0.5 placement-bottom:slide-out-to-top-0.5",
-                                )
-                            }
-                        >
-                            <div className="w-64 rounded-xl bg-white p-4 shadow-lg flex flex-col gap-2">
-                                <Label>打赏金额</Label>
-                                <Input
-                                    placeholder="请输入打赏金额"
-                                    value={price}
-                                    onChange={(e) => {
-                                        try {
-                                            setPrice(parseFloat(e.target.value));
-                                        } catch (error) {
-                                            alert('打赏金额不是数字');
-                                        }
-                                    }}
-                                />
-                                <Button onClick={handleReward}>打赏</Button>
-                            </div>
-                        </AriaPopover>
-                    </AriaDialogTrigger>
-                </ButtonGroup>
                 <header className="max-w-4xl mx-auto px-4 flex items-center justify-start space-x-4">
                     <div className="grid md:grid-cols-2 grid-cols-1 gap-4">
                         <div className="flex items-center justify-start space-x-4">
@@ -180,7 +136,7 @@ export default function Article() {
                         </div>
                     </div>
                 </header>
-
+                <ControlPanelContainer editor={editor} article={article} />
                 {editor && <EditorContent
                     editor={editor}
                     role="presentation"
@@ -206,7 +162,7 @@ function ArticleArweaveInfo({ pageId }: { pageId?: string }) {
 
     const { searchByQuery } = useArweave();
     const [arweaveInfo, setArweaveInfo] = useState<any>(null);
-    
+
     useEffect(() => {
         const loadArweaveInfo = async () => {
             const res = await searchByQuery({ 'Page-Id': pageId });
@@ -222,3 +178,133 @@ function ArticleArweaveInfo({ pageId }: { pageId?: string }) {
         </div>
     );
 }
+
+function ControlPanelContainer(props: ControlPanelProps) {
+    const hiddenClassPair = ["lg:hidden", "max-lg:hidden"]
+    return (
+        <>
+            <MobilePortal OpenIcon={ArrowBlockUp} CloseIcon={CloseIcon} hiddenClass={hiddenClassPair[0]}>
+                <ControlPanel {...props} />
+            </MobilePortal>
+            <div
+                className={`fixed left-8 bottom-8 
+            bg-gray-100 dark:bg-gray-800
+            transform rounded-lg
+            border border-secondary 
+            z-30 overflow-hidden 
+            ${hiddenClassPair[1]}`}
+                style={{ width: '22vw', height: '70%' }}
+            >
+                <ControlPanel {...props} />
+            </div>
+        </>
+    )
+}
+
+interface ControlPanelProps {
+    editor: Editor | null
+    article: Article | null
+    className?: string
+}
+
+function ControlPanel({ className, editor, article }: ControlPanelProps) {
+    const { aid } = useParams<{ aid: string }>()
+    const [price, setPrice] = useState("0");
+    const { transfer } = useCashier();
+    const { build, close: _close } = useGlobalPortal();
+    const navigate = useNavigate();
+    const articleMeta = article ? ArticleMeta.fromArticle(article) : null;
+
+    const handleReward = async () => {
+        if (!article) {
+            alert('文章不存在');
+            return;
+        }
+        try {
+            await transfer(parseFloat(price), article.uid);
+            console.log('打赏成功');
+        } catch (error) {
+            alert('打赏失败' + error);
+            // build('打赏失败', "是否前往充值？", [
+            //     {
+            //         label: "前往充值",
+            //         onClick: () => {
+            //             navigate('/profile');
+            //             _close();
+            //         },
+            //     },
+            // ], false);
+        }
+    }
+    // 处理日志HTML
+    const handleLogHTML = () => {
+        console.log(editor?.getHTML())
+    }
+
+    return (
+        <div className={`h-full w-full p-4 space-y-4 bg-primary ${className}`}>
+
+            <ArticleArweaveInfo pageId={article?.aid} />
+
+            {articleMeta && <ArticleMetaPanel article={articleMeta} />}
+
+            <div className="grid max-lg:grid-cols-2 lg:grid-cols-1 gap-2 ">
+                <ModalButton
+                    title="Log HTML"
+                    tooltip="Log HTML"
+                    iconLeading={Archive}
+                    color="secondary" size="sm"
+                    onClick={handleLogHTML}
+                    forceRefresh
+                    actions={[
+                        {
+                            label: "Close",
+                            onClick: (close) => { close() },
+                            icon: CloseIcon,
+                        },
+                    ]}
+                >
+                    <pre className="p-4 rounded break-words whitespace-pre-wrap overflow-auto">
+                        {JSON.stringify(editor?.getHTML(), null, 2)}
+                    </pre>
+                </ModalButton>
+                <Button
+                    isLoading={false} showTextWhileLoading iconLeading={Archive}
+                    color="secondary" size="sm" onClick={handleLogHTML}
+                >
+                    Log HTML D
+                </Button>
+                <ModalButton
+                    title="Reward"
+                    tooltip="Reward"
+                    iconLeading={Coins01}
+                    color="secondary" size="sm"
+                    // onClick={handleReward}
+                    // forceRefresh
+                    actions={[
+                        {
+                            label: "Reward",
+                            onClick: (close) => { handleReward() },
+                            icon: Coins01,
+                        },
+                    ]}
+                >
+                    <Label>打赏金额</Label>
+                    <Input
+                        type="number"
+                        className="p-4"
+                        placeholder="请输入打赏金额"
+                        value={price}
+                        onChange={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setPrice(e.target.value);
+                        }}
+                    />
+                </ModalButton>
+            </div>
+        </div>
+    )
+}
+
+

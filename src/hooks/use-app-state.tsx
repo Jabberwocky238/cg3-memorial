@@ -1,7 +1,13 @@
-import { createContext, useContext, useReducer, useState, useMemo, useCallback, memo } from "react"
+import { createContext, useContext, useReducer, useState, useMemo, useCallback, memo, type FC } from "react"
 import { LoadingIndicator } from "@/components/application/loading-indicator/loading-indicator";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/base/buttons/button";
+import { Modal, ModalOverlay } from "react-aria-components";
+import { Dialog } from "react-aria-components";
+import { cx } from "@/utils/cx";
+import { ButtonUtility } from "@/components/base/buttons/button-utility";
+import { ButtonGroup, ButtonGroupItem } from "@/components/base/button-group/button-group";
+import { CloseIcon } from "@/components/tiptap-icons/close-icon";
 
 export interface AppState {
     LOG_loading: string[]
@@ -105,4 +111,90 @@ export function useAppState() {
 
 export function isUUID(str: string) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+}
+
+
+interface GlobalPortalActions {
+    label: string
+    icon?: FC<{ className?: string }>
+    onClick: () => void
+}
+interface GlobalPortalContextType {
+    build: (
+        title?: string,
+        content?: React.ReactNode,
+        actions?: GlobalPortalActions[],
+        isDismissable?: boolean
+    ) => void
+    isOpen: boolean
+    close: () => void
+}
+const GlobalPortalContext = createContext<GlobalPortalContextType | null>(null)
+
+export const GlobalPortalProvider = ({ children }: { children: React.ReactNode }) => {
+    const [_children, _setChildren] = useState<{
+        title?: string
+        content?: React.ReactNode
+        actions?: GlobalPortalActions[]
+    } | null>(null)
+
+    const [isDismissable, setIsDismissable] = useState(true)
+    const [isOpen, setOpen] = useState(false)
+    const build = (title?: string, content?: React.ReactNode, actions?: GlobalPortalActions[], isDismissable?: boolean) => {
+        setIsDismissable(isDismissable ?? true)
+        setOpen(true)
+        _setChildren({ title, content, actions })
+    }
+
+    
+    return (
+        <GlobalPortalContext.Provider value={{ build, isOpen, close: () => setOpen(false) }}>
+            {children}
+            <ModalOverlay
+                isDismissable={isDismissable}
+                isOpen={isOpen}
+                onOpenChange={setOpen}
+                className={({ isEntering, isExiting }) =>
+                    cx(
+                        "fixed inset-0 cursor-pointer backdrop-blur-md",
+                        isEntering && "duration-300 ease-in-out animate-in fade-in",
+                        isExiting && "duration-200 ease-in-out animate-out fade-out",
+                    )
+                }
+            >
+                <Dialog className="outline-hidden flex flex-col justify-center items-center w-full h-full">
+                    <div className="bg-primary p-4 rounded-lg border border-secondary md:w-120 max-md:w-full max-h-full overflow-auto">
+                        <header className="flex justify-between items-center">
+                            <h2 className="text-lg font-bold">{_children?.title}</h2>
+                            <ButtonUtility onClick={close} color="secondary" size="sm" icon={CloseIcon} />
+                        </header>
+                        {_children?.content}
+                        <footer className="flex justify-end mt-4">
+                            <ButtonGroup>
+                                {_children?.actions?.map((action) => (
+                                    <ButtonGroupItem
+                                        key={action.label}
+                                        iconLeading={action.icon}
+                                        onClick={() => {
+                                            action.onClick()
+                                        }}
+                                    >
+                                        {action.label}
+                                    </ButtonGroupItem>
+                                ))}
+                            </ButtonGroup>
+                        </footer>
+                    </div>
+                </Dialog>
+            </ModalOverlay>
+        </GlobalPortalContext.Provider>
+    );
+};
+
+export function useGlobalPortal() {
+    const context = useContext(GlobalPortalContext)
+    if (!context) {
+        throw new Error('useGlobalPortal must be used within a GlobalPortalProvider')
+    }
+    return context
 }

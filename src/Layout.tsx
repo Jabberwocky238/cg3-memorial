@@ -14,7 +14,7 @@ import { NavAccountCard, NavAccountMenu } from './components/application/app-nav
 import { Input } from './components/base/input/input'
 import { SearchLg } from '@untitledui/icons'
 import { cx } from './utils/cx'
-import { DialogTrigger } from 'react-aria-components'
+import { DialogTrigger, Tooltip } from 'react-aria-components'
 import { UntitledLogo } from './components/foundations/logo/untitledui-logo'
 import { Button } from './components/base/buttons/button'
 import { Avatar } from './components/base/avatar/avatar'
@@ -29,35 +29,25 @@ const navItems = [
 	{ label: 'Profile', href: '/profile' },
 ]
 
-function useItemsWithCurrent() {
-	const { pathname } = useLocation()
-	return useMemo(() => {
-		return navItems.map((item) => ({
-			...item,
-			current: item.href === '/' ? pathname === '/' : pathname.startsWith(item.href),
-		}))
-	}, [pathname])
-}
-
 const actions = [
 	{
 		href: "/edit/",
 		icon: PlusSquare,
 		label: "New Article",
-		tooltipPlacement: "bottom" as const,
-	},
-	{
-		href: "/settings-01",
-		icon: Settings01,
-		label: "Settings",
 		tooltipPlacement: "bottom" as const
 	},
-	{
-		href: "/notifications-01",
-		icon: Bell01,
-		label: "Notifications",
-		tooltipPlacement: "bottom" as const
-	},
+	// {
+	// 	href: "/settings-01",
+	// 	icon: Settings01,
+	// 	label: "Settings",
+	// 	tooltipPlacement: "bottom" as const
+	// },
+	// {
+	// 	href: "/notifications-01",
+	// 	icon: Bell01,
+	// 	label: "Notifications",
+	// 	tooltipPlacement: "bottom" as const
+	// },
 ] as const
 
 const Layout = memo(() => {
@@ -81,21 +71,21 @@ const Layout = memo(() => {
 export default Layout;
 
 const HeaderNavigation = memo(() => {
-	const items = useItemsWithCurrent()
 	const { userFirebase: user } = useFirebase()
 	const { theme, setTheme } = useTheme()
 	const showSecondaryNav = false;
+	const navigate = useNavigate()
 
 	return (
 		<>
 			<MobileNavigationHeader>
-				<aside className="flex h-full max-w-full flex-col justify-between overflow-auto border-r border-secondary bg-primary pt-4 lg:pt-6">
+				{(state) => (<aside className="flex h-full max-w-full flex-col justify-between overflow-auto border-r border-secondary bg-primary pt-4 lg:pt-6">
 					<div className="flex flex-col gap-5 px-4 lg:px-5">
 						<UntitledLogo className="h-8" />
 						<Input shortcut size="sm" aria-label="Search" placeholder="Search" icon={SearchLg} />
 					</div>
 
-					<NavList items={items} />
+					<NavList items={navItems} state={state} />
 
 					<div className="mt-auto flex flex-col gap-4 px-2 py-4 lg:px-4 lg:py-6">
 						<div className="flex flex-col gap-1">
@@ -103,7 +93,12 @@ const HeaderNavigation = memo(() => {
 								<NavItemBase
 									key={item.label}
 									type="link"
-									href={item.href}
+									// href={item.href}
+									href="#" // 防止点击事件引起页面整体刷新
+									onClick={() => {
+										navigate(item.href)
+										state.close()
+									}}
 									icon={item.icon}
 								>
 									{item.label}
@@ -116,9 +111,9 @@ const HeaderNavigation = memo(() => {
 							</NavItemBase>
 						</div>
 
-						<NavAccountCard items={user ? [user] : []} selectedAccountId={user?.uid} />
+						<NavAccountCard state={state} items={user ? [user] : []} selectedAccountId={user?.uid} />
 					</div>
-				</aside>
+				</aside>)}
 			</MobileNavigationHeader>
 
 			<header className="max-lg:hidden">
@@ -140,12 +135,13 @@ const HeaderNavigation = memo(() => {
 
 							<nav>
 								<ul className="flex items-center gap-0.5">
-									{items.map((item) => (
+									{navItems.map((item) => (
 										<li key={item.label} className="py-0.5">
 											<NavItemBase
-												href={item.href}
-												current={item.current}
+												// href={item.href}
+												href="#"
 												type="link"
+												onClick={() => navigate(item.href)}
 											>
 												{item.label}
 											</NavItemBase>
@@ -165,7 +161,9 @@ const HeaderNavigation = memo(() => {
 										size="md"
 										icon={item.icon ?? PlusSquare}
 										label={item.label}
-										href={item.href}
+										// href={item.href}
+										href="#"
+										onClick={() => navigate(item.href)}
 										tooltipPlacement={item.tooltipPlacement}
 									/>
 								))}
@@ -182,45 +180,43 @@ const HeaderNavigation = memo(() => {
 								/>
 							</div>
 
-							{true && (
-								user ? (
-									<DialogTrigger>
-										<AriaButton
-											className={({ isPressed, isFocused }) =>
-												cx(
-													"group relative inline-flex cursor-pointer",
-													(isPressed || isFocused) && "rounded-full outline-2 outline-offset-2 outline-focus-ring",
-												)
-											}
-										>
-											<Avatar alt={user.displayName!} src={user.photoURL!} size="md" />
-										</AriaButton>
-										<Popover
-											placement="bottom right"
-											offset={8}
-											className={({ isEntering, isExiting }) =>
-												cx(
-													"will-change-transform",
-													isEntering &&
-													"duration-300 ease-out animate-in fade-in placement-right:slide-in-from-left-2 placement-top:slide-in-from-bottom-2 placement-bottom:slide-in-from-top-2",
-													isExiting &&
-													"duration-150 ease-in animate-out fade-out placement-right:slide-out-to-left-2 placement-top:slide-out-to-bottom-2 placement-bottom:slide-out-to-top-2",
-												)
-											}
-										>
-											<NavAccountMenu items={user ? [user] : []} selectedAccountId={user?.uid} />
-										</Popover>
-									</DialogTrigger>
-								) : (
-									<div className="flex items-center gap-2">
-										<Link to="/auth#login">
-											<Button size="sm">Login</Button>
-										</Link>
-										<Link to="/auth#signup">
-											<Button size="sm" color="secondary">Sign up</Button>
-										</Link>
-									</div>
-								)
+							{user ? (
+								<DialogTrigger>
+									<AriaButton
+										className={({ isPressed, isFocused }) =>
+											cx(
+												"group relative inline-flex cursor-pointer",
+												(isPressed || isFocused) && "rounded-full outline-2 outline-offset-2 outline-focus-ring",
+											)
+										}
+									>
+										<Avatar alt={user.displayName!} src={user.photoURL!} size="md" />
+									</AriaButton>
+									<Popover
+										placement="bottom right"
+										offset={8}
+										className={({ isEntering, isExiting }) =>
+											cx(
+												"will-change-transform",
+												isEntering &&
+												"duration-300 ease-out animate-in fade-in placement-right:slide-in-from-left-2 placement-top:slide-in-from-bottom-2 placement-bottom:slide-in-from-top-2",
+												isExiting &&
+												"duration-150 ease-in animate-out fade-out placement-right:slide-out-to-left-2 placement-top:slide-out-to-bottom-2 placement-bottom:slide-out-to-top-2",
+											)
+										}
+									>
+										<NavAccountMenu items={user ? [user] : []} selectedAccountId={user?.uid} />
+									</Popover>
+								</DialogTrigger>
+							) : (
+								<div className="flex items-center gap-2">
+									<Link to="/auth#login">
+										<Button size="sm">Login</Button>
+									</Link>
+									<Link to="/auth#signup">
+										<Button size="sm" color="secondary">Sign up</Button>
+									</Link>
+								</div>
 							)}
 						</div>
 					</div>

@@ -1,10 +1,10 @@
 import type { FC, HTMLAttributes } from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useContext, useEffect, useRef } from "react";
 import type { Placement } from "@react-types/overlays";
 import { BookOpen01, ChevronSelectorVertical, LogOut01, Plus, Settings01, User01 } from "@untitledui/icons";
 import { useFocusManager } from "react-aria";
-import type { DialogProps as AriaDialogProps } from "react-aria-components";
-import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover, Link } from "react-aria-components";
+import type { DialogProps as AriaDialogProps, OverlayTriggerState } from "react-aria-components";
+import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover, Link, OverlayTriggerStateContext } from "react-aria-components";
 import { AvatarLabelGroup } from "../../../base/avatar/avatar-label-group";
 import { Button } from "../../../base/buttons/button";
 import { RadioButtonBase } from "../../../base/radio-buttons/radio-buttons";
@@ -14,16 +14,25 @@ import { useFirebase } from "@/hooks/use-firebase";
 import { useNavigate } from "react-router-dom";
 import type { UserInfo } from "firebase/auth";
 
+interface NavAccountMenuProps extends AriaDialogProps {
+    className?: string;
+    items?: UserInfo[];
+    selectedAccountId?: string;
+    state?: OverlayTriggerState;
+}
+
 export const NavAccountMenu = ({
     className,
     selectedAccountId,
     items,
+    state, // 最外侧的状态
     ...dialogProps
-}: AriaDialogProps & { className?: string; items?: UserInfo[]; selectedAccountId?: string }) => {
+}: NavAccountMenuProps) => {
     const focusManager = useFocusManager();
     const dialogRef = useRef<HTMLDivElement>(null);
     const { signOut } = useFirebase();
     const navigate = useNavigate();
+    const _state = useContext(OverlayTriggerStateContext); // 自己的状态
 
     const onKeyDown = useCallback(
         (e: KeyboardEvent) => {
@@ -62,11 +71,11 @@ export const NavAccountMenu = ({
                 <div className="flex flex-col gap-0.5 py-1.5">
                     <NavAccountCardMenuItem label="View profile" onClick={(e) => {
                         navigate("/profile")
-                    }} icon={User01} shortcut="⌘K->P" />
-                    <NavAccountCardMenuItem label="Account settings" onClick={(e) => {
-                        navigate("/profile")
-                    }} icon={Settings01} shortcut="⌘S" />
-                    <NavAccountCardMenuItem label="Documentation" icon={BookOpen01} />
+                        state?.close()
+                        _state?.close()
+                    }} icon={Settings01} shortcut="⌘K->P" />
+                    {/* <NavAccountCardMenuItem label="Account settings"icon={Settings01} shortcut="⌘S" /> */}
+                    {/* <NavAccountCardMenuItem label="Documentation" icon={BookOpen01} /> */}
                 </div>
                 <div className="flex flex-col gap-0.5 border-t border-secondary py-1.5">
                     <div className="px-3 pt-1.5 pb-1 text-xs font-semibold text-tertiary">Switch account</div>
@@ -86,11 +95,11 @@ export const NavAccountMenu = ({
                         ))}
                     </div>
                 </div>
-                <div className="flex flex-col gap-2 px-2 pt-0.5 pb-2">
+                {/* <div className="flex flex-col gap-2 px-2 pt-0.5 pb-2">
                     <Button iconLeading={Plus} color="secondary" size="sm">
                         Add account
                     </Button>
-                </div>
+                </div> */}
             </div>
 
             <div className="pt-1 pb-1.5">
@@ -135,14 +144,15 @@ export const NavAccountCard = ({
     popoverPlacement,
     selectedAccountId,
     items,
+    state,
 }: {
     popoverPlacement?: Placement;
     selectedAccountId?: string;
     items: UserInfo[];
+    state: OverlayTriggerState;
 }) => {
     const triggerRef = useRef<HTMLDivElement>(null);
     const isDesktop = useBreakpoint("lg");
-
     const selectedAccount = items?.find((account) => account.uid === selectedAccountId);
 
     if (items.length === 0) {
@@ -192,7 +202,7 @@ export const NavAccountCard = ({
                             )
                         }
                     >
-                        <NavAccountMenu selectedAccountId={selectedAccountId} items={items} />
+                        <NavAccountMenu state={state} selectedAccountId={selectedAccountId} items={items} />
                     </AriaPopover>
                 </AriaDialogTrigger>
             </div>

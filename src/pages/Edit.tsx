@@ -1,15 +1,16 @@
 import { useEffect, useState, useRef } from 'react'
+import type { Key } from '@react-types/shared'
 import { useParams } from 'react-router-dom'
 import { useFirebase } from '@/hooks/use-firebase'
 import { useApi } from '@/hooks/use-backend'
 import { useArweave } from '@/hooks/use-arweave'
 import { useTheme } from '@/hooks/use-theme'
-import { Archive, ArrowBlockUp, ArrowBlockDown, Edit03, Trash01, CheckCircle } from "@untitledui/icons";
+import { Archive, ArrowBlockUp, ArrowBlockDown, Edit03, Trash01, CheckCircle, XClose } from "@untitledui/icons";
 import { useEditorLifetime } from '@/hooks/use-editor-lifetime'
 import { useIsMobile } from '@/hooks/tiptap/use-mobile'
 import { useWindowSize } from '@/hooks/tiptap/use-window-size'
 import { useCursorVisibility } from '@/hooks/tiptap/use-cursor-visibility'
-import { EditorContext, EditorContent } from '@tiptap/react'
+import { EditorContext, EditorContent, type JSONContent } from '@tiptap/react'
 import { Editor } from '@tiptap/react'
 import { Toolbar } from '@/components/tiptap-ui-primitive/toolbar/toolbar'
 import { MainToolbarContent } from '@/components/tiptap-templates/simple/simple-editor'
@@ -18,24 +19,32 @@ import { GeneralPortal, MobilePortal, ModalButton } from '@/components/applicati
 import { CloseIcon } from '@/components/tiptap-icons/close-icon'
 import { Button } from '@/components/base/buttons/button'
 import { isUUID, useAppState } from '@/hooks/use-app-state'
-import { ButtonUtility } from '@/components/base/buttons/button-utility'
+import { Tag, TagGroup, type TagItem, TagList } from "@/components/base/tags/tags";
+import { Input } from "@/components/base/input/input";
+import { Select, type SelectItemType } from "@/components/base/select/select";
+import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/button-group'
+import { ArticleMeta, ArticleMetaPanel, type ArticleMetaPanelProps, type TagTreeType } from '@/components/cg-ui/ArticleMeta'
 
 function EditPage() {
   const { aid } = useParams()
   const { userFirebase } = useFirebase()
   const { getArticle } = useApi()
   const { editor } = useEditorLifetime(true)
-  const contentRef = useRef<string | null>(null)
+  const articleRef = useRef<ArticleMeta>(new ArticleMeta())
   const { LOG_append, LOG_clear, setError } = useAppState()
 
   const tryLoadArticle = async (aid: string) => {
-    if (contentRef.current) return
     console.log('Edit: 开始加载文章', aid)
     const result = await getArticle(aid)
     if (result.data) {
       const isBelongToUser = result.data.uid === userFirebase?.uid
       console.log('Edit: 文章数据加载成功', result.data)
-      contentRef.current = JSON.parse(result.data.content ?? '{}')
+      articleRef.current.lock()
+      articleRef.current.aid = result.data.aid
+      articleRef.current.title = result.data.title
+      articleRef.current.tags = JSON.parse(result.data.tags)
+      articleRef.current.content = JSON.parse(result.data.content)
+      articleRef.current.unlock()
       return { isBelongToUser }
     }
     return { isBelongToUser: false }
@@ -43,12 +52,15 @@ function EditPage() {
 
   useEffect(() => {
     if (!editor) return
-    if (!contentRef.current) return
-    editor.commands.setContent(contentRef.current)
-  }, [editor, contentRef.current])
+    if (!articleRef.current) return
+    if (articleRef.current.isLocked) return
+    editor.commands.setContent(articleRef.current.content)
+  }, [editor, articleRef.current?.isLocked, articleRef.current?.content])
 
   useEffect(() => {
-    if (!aid) return // 如果文章 ID 为空，则认为创建新文章
+    if (!aid) { // 如果文章 ID 为空，则认为创建新文章
+      return
+    }
     if (!isUUID(aid)) {
       setError('Edit: 文章 ID 无效' + aid)
       return
@@ -70,7 +82,7 @@ function EditPage() {
 
   return (
     <div className="space-y-4 relative">
-      <ControlPanelContainer editor={editor} />
+      <ControlPanelContainer editor={editor} article={articleRef.current} />
       {editor && <MySimpleEditor editor={editor} />}
     </div>
   )
@@ -138,12 +150,18 @@ function MySimpleEditor({ editor }: { editor: Editor | null }) {
   )
 }
 
-function ControlPanelContainer({ editor }: { editor: Editor | null }) {
+interface ControlPanelProps {
+  className?: string
+  editor: Editor | null
+  article: ArticleMeta // readonly or needless to update renderer
+}
+
+function ControlPanelContainer(props: ControlPanelProps) {
   const hiddenClassPair = ["lg:hidden", "max-lg:hidden"]
   return (
     <>
       <MobilePortal OpenIcon={ArrowBlockUp} CloseIcon={CloseIcon} hiddenClass={hiddenClassPair[0]}>
-        <ControlPanel editor={editor} />
+        <ControlPanel {...props} />
       </MobilePortal>
       <div
         className={`fixed left-8 bottom-8 
@@ -154,25 +172,16 @@ function ControlPanelContainer({ editor }: { editor: Editor | null }) {
           ${hiddenClassPair[1]}`}
         style={{ width: '22vw', height: '70%' }}
       >
-        <ControlPanel editor={editor} />
+        <ControlPanel {...props} />
       </div>
     </>
   )
 }
 
-interface ControlPanelProps {
-  editor: Editor | null
-  className?: string
-}
-
-function ControlPanel({ className, editor }: ControlPanelProps) {
-  const { aid } = useParams()
-  const { userFirebase } = useFirebase()
-  const { createArticle, updateArticle } = useApi()
+function ControlPanel({ className, editor, article }: ControlPanelProps) {
   const { createTx } = useArweave()
   const { theme } = useTheme()
-  const [title, setTitle] = useState('Untitled')
-
+  const [isDirty, setIsDirty] = useState(false)
   // 监听编辑器内容变化，更新标题
   useEffect(() => {
     if (!editor) return
@@ -184,10 +193,11 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
         return type.name === 'heading' && attrs.level === 1
       })
       if (!heading) {
-        setTitle('Untitled')
+        article.title = 'Untitled'
         return
       }
-      setTitle(heading?.content.content[0].text ?? 'Untitled')
+      article.title = heading?.content.content[0].text ?? 'Untitled'
+      setIsDirty(true)
     }, 1000)
     return () => clearInterval(timer)
   }, [editor])
@@ -206,36 +216,6 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
   const handleLogHTML = () => {
     console.log(editor?.getHTML())
   }
-
-  // 处理清空内容
-  const handleCleanContent = () => {
-    editor?.commands.setContent('')
-  }
-
-  // 处理发布文章
-  const [isPublishing, setIsPublishing] = useState(false)
-  const handlePublish = async () => {
-    if (!editor || !userFirebase) return
-
-    setIsPublishing(true)
-    try {
-      const json = editor.getJSON()
-      if (aid) {
-        await updateArticle(aid, title, JSON.stringify(json))
-        alert('文章更新成功')
-      } else {
-        await createArticle(userFirebase.uid, title, JSON.stringify(json))
-        alert('文章创建成功')
-      }
-      console.log('文章发布成功')
-    } catch (error) {
-      console.error('发布文章失败:', error)
-      alert('发布文章失败: ' + error)
-    } finally {
-      setIsPublishing(false)
-    }
-  }
-
   // 处理上链
   const [isUpchaining, setIsUpchaining] = useState(false)
   const handleUpchain = async () => {
@@ -250,10 +230,10 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
 
     setIsUpchaining(true)
     try {
-      const template = templateMake(html, title, theme === 'dark')
+      const template = templateMake(html, article.title, theme === 'dark')
       const { tx, res } = await createTx(template, [
         ['Content-Type', 'text/html'],
-        ['Title', title],
+        ['Title', article.title],
         ['Type', 'file'],
         ['User-Agent', 'Permane-Inc'],
       ])
@@ -268,12 +248,8 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
   }
 
   return (
-    <div className={`h-full w-full p-4 space-y-4 bg-primary ${className}`}>
-      <div className="text-xs">
-        <p>文章标题: {title}</p>
-        <p className="break-all truncate">文章ID: {aid}</p>
-        <p>上链状态: {isUpchaining ? '上链中...' : '未上链'}</p>
-      </div>
+    <div className={`h-full w-full p-4 space-y-4 bg-primary ${className} overflow-auto`}>
+      <ArticleMetaPanel article={article} />
 
       <div className="grid max-lg:grid-cols-3 lg:grid-cols-1 gap-2 ">
         <Button
@@ -298,7 +274,7 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
           actions={[
             {
               label: "Close",
-              onClick: (close) => {close()},
+              onClick: (close) => { close() },
               icon: CloseIcon,
             },
           ]}
@@ -307,24 +283,29 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
             {JSON.stringify(editor?.getHTML(), null, 2)}
           </pre>
         </ModalButton>
-        {/* <Button
-          isLoading={false} showTextWhileLoading iconLeading={Archive}
-          color="secondary" size="sm" onClick={handleLogHTML}
+        <ModalButton
+          title="Tags"
+          tooltip="Tags"
+          iconLeading={Trash01}
+          color="secondary" size="sm"
         >
-          Log HTML
-        </Button> */}
-        <Button
-          isLoading={false} showTextWhileLoading iconLeading={Archive}
-          color="secondary" size="sm" onClick={handleCleanContent}
+          {(close) => <TagsPanel
+            close={close}
+            getTags={() => article.tags}
+            setTags={(tags) => {
+              article.tags = tags;
+              setIsDirty(true)
+            }}
+          />}
+        </ModalButton>
+        <ModalButton
+          title="Publish"
+          tooltip="Publish"
+          iconLeading={CheckCircle}
+          color="secondary" size="sm"
         >
-          Clear Content
-        </Button>
-        <Button
-          isLoading={isPublishing} showTextWhileLoading iconLeading={CheckCircle}
-          color="secondary" size="sm" onClick={handlePublish}
-        >
-          Publish
-        </Button>
+          {(close) => <ArticleMetaEditPanel close={close} article={article} setIsDirty={setIsDirty} />}
+        </ModalButton>
         <Button
           isLoading={isUpchaining} showTextWhileLoading iconLeading={Archive}
           color="secondary" size="sm" onClick={handleUpchain}
@@ -356,4 +337,186 @@ function templateMake(html: string, title: string, isDark: boolean) {
 </html>`
 }
 
+interface TagsPanelProps {
+  close: () => void
+  getTags: () => TagTreeType
+  setTags: (tags: TagTreeType) => void
+}
 
+function TagsPanel({ close, getTags, setTags }: TagsPanelProps) {
+  const validKeys = ['topic', 'date'].map((key) => ({ id: key, label: key })) satisfies SelectItemType[]
+  const [chosenKey, setChosenKey] = useState<Key>(validKeys[0].id as Key)
+  const [tagTree, setTagTree] = useState<TagTreeType>(getTags())
+
+  useEffect(() => {
+    setTagTree(getTags())
+  }, [getTags])
+
+  const [newTagValue, setNewTagValue] = useState<string>('')
+  const [hintAndValid, setHintAndValid] = useState<{ hint: string, isInvalid: boolean }>({ hint: 'Input a new tag', isInvalid: false })
+
+  return (
+    <div className="space-y-4">
+      {/* 添加新标签 */}
+      <div className="flex items-center gap-2">
+        <Select className='w-1/3' items={validKeys} value={chosenKey}
+          isRequired
+          hint='choose a key'
+          onChange={(e) => {
+            if (!e) return
+            setChosenKey(e)
+          }}
+          label="Key">
+          {(item) => (
+            <Select.Item id={item.id} supportingText={item.supportingText} isDisabled={item.isDisabled} icon={item.icon} avatarUrl={item.avatarUrl}>
+              {item.label}
+            </Select.Item>
+          )}
+        </Select>
+        <Input className='w-1/2' autoFocus isRequired hint={hintAndValid.hint} isInvalid={hintAndValid.isInvalid} value={newTagValue} onChange={(e) => setNewTagValue(e)} label="New Tag Value" />
+        <Button className='w-1/6' onClick={() => {
+          if (newTagValue === '') {
+            setHintAndValid({ hint: 'Tag is empty', isInvalid: true })
+            return
+          }
+          // 检查是否已存在相同标签名的分类
+          const exists = tagTree[chosenKey]?.some(tag => tag === newTagValue)
+          if (exists) {
+            setHintAndValid({ hint: 'Tag already exists', isInvalid: true })
+            return
+          }
+          tagTree[chosenKey] = [...(tagTree[chosenKey] ?? []), newTagValue]
+          setNewTagValue('')
+          setHintAndValid({ hint: 'Tag added', isInvalid: false })
+        }}>Add</Button>
+      </div>
+      <div className="flex flex-col items-start gap-4">
+        {Object.entries(tagTree).map(([key, value]) => (
+          <div key={key} className="flex flex-col items-start gap-4 md:flex-row">
+            {/* key部分 */}
+            <TagGroup label={key + " Key"} size="md"
+              onRemove={(keys: Set<Key>) => {
+                const newtagtree = Object.entries(tagTree).filter(([key, values]) => !keys.has(key as Key)).reduce((acc, [key, values]) => {
+                  acc[key] = values
+                  return acc
+                }, {} as TagTreeType)
+                setTagTree(newtagtree)
+              }}
+            >
+              <TagList className="flex flex-col items-start gap-4 md:flex-row" items={
+                [{ id: String(key), label: String(key) }] satisfies TagItem[]
+              }>
+                {(item: TagItem) => <Tag count={value.length} {...item}>{item.label}</Tag>}
+              </TagList>
+            </TagGroup>
+            {/* value部分 */}
+            <TagGroup label={String(key) + " Tags"} size="md"
+              onRemove={(valueKeys: Set<Key>) => {
+                const newTags = value.filter((tag) => !valueKeys.has(tag))
+                const newtagtree = { ...tagTree, [key]: newTags }
+                setTagTree(newtagtree)
+              }}
+            >
+              <TagList className="flex flex-col items-start gap-1" items={value.map((tag) => ({ id: tag, label: tag })) satisfies TagItem[]}>
+                {(item: TagItem) => <Tag dot={true} {...item}>{item.label}</Tag>}
+              </TagList>
+            </TagGroup>
+          </div>
+        ))}
+      </div>
+      <footer className="flex justify-end mt-4">
+        <ButtonGroup>
+          {[
+            {
+              label: "Confirm",
+              onClick: () => {
+                close()
+                setTags(tagTree)
+              },
+              icon: CheckCircle,
+            },
+          ]?.map((action) => (
+            <ButtonGroupItem
+              key={action.label}
+              iconLeading={action.icon}
+              onClick={action.onClick}
+            >
+              {action.label}
+            </ButtonGroupItem>
+          ))}
+        </ButtonGroup>
+      </footer>
+    </div>
+  )
+}
+
+
+interface ArticleMetaEditPanelProps extends ArticleMetaPanelProps {
+  close: () => void
+  setIsDirty: (isDirty: boolean) => void
+}
+
+export function ArticleMetaEditPanel({ article, isDirty, setIsDirty, close }: ArticleMetaEditPanelProps) {
+  const [started, setStarted] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const { createArticle, updateArticle } = useApi()
+  const { userFirebase } = useFirebase()
+  const handlePublish = async () => {
+    if (!userFirebase?.uid) return
+    setStarted(true)
+    setIsPublishing(true)
+    try {
+      const json = article.content
+      if (article.aid) {
+        await updateArticle(article.aid, article.title, JSON.stringify(json), JSON.stringify(article.tags))
+      } else {
+        await createArticle(userFirebase?.uid, article.title, JSON.stringify(json), JSON.stringify(article.tags))
+      }
+      console.log('文章发布成功')
+    } catch (error) {
+      console.error('发布文章失败:', error)
+      throw error
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+  return (
+    <div className="space-y-4">
+      <ArticleMetaPanel article={article} isDirty={isDirty} />
+      <div className="flex items-center gap-2">
+        status: <p className={`text-sm ${!started ? 'text-gray-500' : isPublishing ? 'text-yellow-500' : 'text-green-500'}`} >
+          {!started ? 'Ready' : isPublishing ? 'Publishing...' : 'Published'}
+        </p>
+      </div>
+      <footer className="flex justify-end mt-4">
+        <ButtonGroup>
+          {[
+            {
+              label: "Publish",
+              onClick: async () => {
+                try {
+                  await handlePublish()
+                } catch (error) {
+                  console.error('发布文章失败:', error)
+                  throw error
+                } finally {
+                  setIsDirty(false)
+                  close?.()
+                }
+              },
+              icon: CheckCircle,
+            },
+          ]?.map((action) => (
+            <ButtonGroupItem
+              key={action.label}
+              iconLeading={action.icon}
+              onClick={action.onClick}
+            >
+              {action.label}
+            </ButtonGroupItem>
+          ))}
+        </ButtonGroup>
+      </footer>
+    </div>
+  )
+}
