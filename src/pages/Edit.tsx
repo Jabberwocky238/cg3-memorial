@@ -14,10 +14,11 @@ import { Editor } from '@tiptap/react'
 import { Toolbar } from '@/components/tiptap-ui-primitive/toolbar/toolbar'
 import { MainToolbarContent } from '@/components/tiptap-templates/simple/simple-editor'
 import { MobileToolbarContent } from '@/components/tiptap-templates/simple/simple-editor'
-import { MobilePortal } from '@/components/application/app-navigation/base-components/mobile-header';
+import { GeneralPortal, MobilePortal, ModalButton } from '@/components/application/app-navigation/base-components/mobile-header';
 import { CloseIcon } from '@/components/tiptap-icons/close-icon'
 import { Button } from '@/components/base/buttons/button'
 import { isUUID, useAppState } from '@/hooks/use-app-state'
+import { ButtonUtility } from '@/components/base/buttons/button-utility'
 
 function EditPage() {
   const { aid } = useParams()
@@ -103,6 +104,7 @@ function MySimpleEditor({ editor }: { editor: Editor | null }) {
     <div className="simple-editor-wrapper">
       <EditorContext.Provider value={{ editor }}>
         <Toolbar
+          data-variant="fixed"
           ref={toolbarRef}
           style={{
             ...(isMobile
@@ -170,8 +172,6 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
   const { createTx } = useArweave()
   const { theme } = useTheme()
   const [title, setTitle] = useState('Untitled')
-  const [isUpchaining, setIsUpchaining] = useState(false)
-  const [isPublishing, setIsPublishing] = useState(false)
 
   // 监听编辑器内容变化，更新标题
   useEffect(() => {
@@ -213,6 +213,7 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
   }
 
   // 处理发布文章
+  const [isPublishing, setIsPublishing] = useState(false)
   const handlePublish = async () => {
     if (!editor || !userFirebase) return
 
@@ -236,6 +237,7 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
   }
 
   // 处理上链
+  const [isUpchaining, setIsUpchaining] = useState(false)
   const handleUpchain = async () => {
     if (!editor) return
 
@@ -286,12 +288,31 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
         >
           Log JSON
         </Button>
-        <Button
+        <ModalButton
+          title="Log HTML"
+          tooltip="Log HTML"
+          iconLeading={Archive}
+          color="secondary" size="sm"
+          onClick={handleLogHTML}
+          forceRefresh
+          actions={[
+            {
+              label: "Close",
+              onClick: (close) => {close()},
+              icon: CloseIcon,
+            },
+          ]}
+        >
+          <pre className="p-4 rounded break-words whitespace-pre-wrap overflow-auto">
+            {JSON.stringify(editor?.getHTML(), null, 2)}
+          </pre>
+        </ModalButton>
+        {/* <Button
           isLoading={false} showTextWhileLoading iconLeading={Archive}
           color="secondary" size="sm" onClick={handleLogHTML}
         >
           Log HTML
-        </Button>
+        </Button> */}
         <Button
           isLoading={false} showTextWhileLoading iconLeading={Archive}
           color="secondary" size="sm" onClick={handleCleanContent}
@@ -299,13 +320,13 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
           Clear Content
         </Button>
         <Button
-          isLoading={false} showTextWhileLoading iconLeading={Archive}
+          isLoading={isPublishing} showTextWhileLoading iconLeading={Archive}
           color="secondary" size="sm" onClick={handlePublish}
         >
           Publish
         </Button>
         <Button
-          isLoading={false} showTextWhileLoading iconLeading={Archive}
+          isLoading={isUpchaining} showTextWhileLoading iconLeading={Archive}
           color="secondary" size="sm" onClick={handleUpchain}
         >
           Upchain

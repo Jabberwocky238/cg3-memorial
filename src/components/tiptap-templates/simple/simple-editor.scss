@@ -56,7 +56,7 @@ body,
 
 .simple-editor-wrapper {
   width: 100vw;
-  height: 100vh;
+  height: calc(100vh - var(--spacing) * 16);
   overflow: auto;
 }
 
