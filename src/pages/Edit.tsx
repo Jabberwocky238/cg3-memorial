@@ -4,7 +4,7 @@ import { useFirebase } from '@/hooks/use-firebase'
 import { useApi } from '@/hooks/use-backend'
 import { useArweave } from '@/hooks/use-arweave'
 import { useTheme } from '@/hooks/use-theme'
-import { Archive, ArrowBlockUp, ArrowBlockDown, Edit03, Trash01 } from "@untitledui/icons";
+import { Archive, ArrowBlockUp, ArrowBlockDown, Edit03, Trash01, CheckCircle } from "@untitledui/icons";
 import { useEditorLifetime } from '@/hooks/use-editor-lifetime'
 import { useIsMobile } from '@/hooks/tiptap/use-mobile'
 import { useWindowSize } from '@/hooks/tiptap/use-window-size'
@@ -320,7 +320,7 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
           Clear Content
         </Button>
         <Button
-          isLoading={isPublishing} showTextWhileLoading iconLeading={Archive}
+          isLoading={isPublishing} showTextWhileLoading iconLeading={CheckCircle}
           color="secondary" size="sm" onClick={handlePublish}
         >
           Publish

@@ -53,20 +53,18 @@ export default function Explore() {
   }, []);
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 py-4">
-        <div className="mb-4 flex items-center justify-start gap-4">
-          <h1 className="text-3xl font-bold mb-2">探索文章</h1>
-          <p>发现社区中的精彩内容</p>
-        </div>
+    <div className="min-h-screen max-w-4xl mx-auto px-4 py-4">
+      <div className="mb-4 flex items-center justify-start gap-4">
+        <h1 className="text-3xl font-bold mb-2">探索文章</h1>
+        <p>发现社区中的精彩内容</p>
+      </div>
 
-        <div className="space-y-6">
-          {articles.map((article) => (
-            <ArticleItem key={article.aid} article={article} onClick={() => {
-              navigate(`/article/${article.aid}`);
-            }} />
-          ))}
-        </div>
+      <div className="space-y-6">
+        {articles.map((article) => (
+          <ArticleItem key={article.aid} article={article} onClick={() => {
+            navigate(`/article/${article.aid}`);
+          }} />
+        ))}
       </div>
     </div>
   );

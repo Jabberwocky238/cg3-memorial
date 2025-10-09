@@ -57,11 +57,12 @@ body,
 .simple-editor-wrapper {
   width: 100vw;
   height: calc(100vh - var(--spacing) * 16);
-  overflow: auto;
+  overflow: hidden;
 }
 
 .simple-editor-content {
   max-width: 648px;
+  overflow-x: hidden; // 隐藏水平滚动条
   width: 100%;
   margin: 0 auto;
   height: 100%;

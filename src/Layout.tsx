@@ -62,20 +62,18 @@ const actions = [
 
 const Layout = memo(() => {
 	return (
-		<div className={`flex flex-col h-dvh overflow-y-hidden`} style={{
+		<div className={`flex flex-col h-dvh overflow-hidden`} style={{
 			color: 'var(--color-text-primary)',
 			backgroundColor: 'var(--background-color-primary)',
 		}}>
 			<HeaderNavigation />
-			<main className={`flex-1`}>
-				<AppStateProvider>
-					<ArweaveProvider>
-						<CashierProvider>
-							<Outlet />
-						</CashierProvider>
-					</ArweaveProvider>
-				</AppStateProvider>
-			</main>
+			<AppStateProvider>
+				<ArweaveProvider>
+					<CashierProvider>
+						<Outlet />
+					</CashierProvider>
+				</ArweaveProvider>
+			</AppStateProvider>
 		</div>
 	)
 });
@@ -160,8 +158,8 @@ const HeaderNavigation = memo(() => {
 						<div className="flex items-center gap-3">
 							{/* {trailingContent} */}
 
-						<div className="flex gap-0.5">
-							{actions?.map((item) => (
+							<div className="flex gap-0.5">
+								{actions?.map((item) => (
 									<NavItemButton
 										key={item.label}
 										size="md"

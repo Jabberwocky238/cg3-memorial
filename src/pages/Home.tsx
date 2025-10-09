@@ -1,12 +1,11 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useFirebase } from '../hooks/use-firebase'
-import { useTheme } from '../hooks/use-theme'
 
 export default function HomePage() {
 	const { signOut, userFirebase } = useFirebase()
 	const navigate = useNavigate()
 	return (
-		<div className="min-h-dvh grid place-items-center px-4">
+		<div className="w-full h-full grid place-items-center px-4">
 			<div className="w-full max-w-sm space-y-4 text-center">
 				<h1 className="text-xl font-semibold">首页</h1>
 				{userFirebase ? (
