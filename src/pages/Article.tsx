@@ -8,12 +8,13 @@ import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/but
 import { ArrowLeft, Coins01, Edit03 } from '@untitledui/icons';
 import { useEditorLifetime } from '@/hooks/use-editor-lifetime';
 import { EditorContent } from '@tiptap/react';
-import { useAppState } from '@/hooks/use-app-state';
+import { isUUID, useAppState } from '@/hooks/use-app-state';
 import type { UserInfo } from 'firebase/auth';
 import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover, Input, Link } from "react-aria-components";
 import { cx } from '@/utils/cx';
 import { Label } from '@/components/base/input/label';
 import { useCashier } from '@/hooks/use-cashier';
+import { useArweave } from '@/hooks/use-arweave';
 
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
@@ -26,7 +27,7 @@ export default function Article() {
     const { userFirebase, getUserFirebase } = useFirebase();
     const triggerRef = useRef<HTMLButtonElement>(null);
     const { transfer } = useCashier();
-
+    
     const loadArticleData = async () => {
         if (!aid) {
             throw new Error('文章 ID 无效');
@@ -40,7 +41,6 @@ export default function Article() {
             const userInfo = await getUserFirebase(result.data.uid);
             setAuthor(userInfo);
             setArticle(result.data);
-            console.log('Article: 文章数据和用户信息加载完成');
         } else {
             throw new Error('文章不存在');
         }
@@ -48,6 +48,10 @@ export default function Article() {
 
     // 第一个 useEffect: 加载文章内容和用户信息
     useEffect(() => {
+        if (!aid || !isUUID(aid)) {
+            setError('Article: 文章 ID 无效');
+            return;
+        }
         LOG_append('Article: 开始加载文章数据' + aid);
         try {
             loadArticleData();
@@ -98,6 +102,7 @@ export default function Article() {
             <div className="py-8">
                 {/* 文章头部 */}
                 <ButtonGroup className="w-full mx-auto px-4 justify-center">
+                    <ArticleArweaveInfo pageId={article?.aid} />
                     <ButtonGroupItem iconLeading={ArrowLeft} onClick={handleBack}>
                         返回
                     </ButtonGroupItem>
@@ -195,3 +200,25 @@ const formatDate = (dateString: string) => {
         minute: '2-digit',
     });
 };
+
+function ArticleArweaveInfo({ pageId }: { pageId?: string }) {
+    if (!pageId) return null;
+
+    const { searchByQuery } = useArweave();
+    const [arweaveInfo, setArweaveInfo] = useState<any>(null);
+    
+    useEffect(() => {
+        const loadArweaveInfo = async () => {
+            const res = await searchByQuery({ 'Page-Id': pageId });
+            console.log('Article: 文章数据和用户信息加载完成', res);
+            setArweaveInfo(res);
+        };
+        loadArweaveInfo();
+    }, [searchByQuery]);
+
+    return (
+        <div>
+            <p>Article Arweave Info</p>
+        </div>
+    );
+}

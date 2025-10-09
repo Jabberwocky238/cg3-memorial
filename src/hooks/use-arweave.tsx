@@ -19,6 +19,7 @@ interface ArweaveContextType extends UserArweaveSecret, UserArweavePublic {
     loading: boolean
     error: string | null
     searchTx: (query: string) => Promise<any>
+    searchByQuery: (tags: Record<string, string>, arweaveAddress?: string) => Promise<any>
     createTx: (content: string, headers: [string, string][]) => Promise<any>
 }
 
@@ -33,10 +34,10 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
     const [innerSecret, setInnerSecret] = useState<UserArweaveSecret | null>(null)
     const [innerPublic, setInnerPublic] = useState<UserArweavePublic | null>(null)
 
-    const { 
-        userFirebase: user, auth, loading: fbloading, 
-        getFirebaseSecret, setFirebaseSecret, 
-        getFirebasePublic, setFirebasePublic 
+    const {
+        userFirebase: user, auth, loading: fbloading,
+        getFirebaseSecret, setFirebaseSecret,
+        getFirebasePublic, setFirebasePublic
     } = useFirebase()
 
     useEffect(() => {
@@ -120,10 +121,15 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
         return _searchTx(arweaveRef.current, query)
     }, [arweaveRef.current])
 
+    const searchByQuery = useCallback((tags: Record<string, string>, arweaveAddress?: string) => {
+        if (!arweaveRef.current) throw new Error('Arweave 未初始化')
+        return _searchByQuery(arweaveRef.current, tags, arweaveAddress)
+    }, [arweaveRef.current])
+
     return (
-        <ArweaveContext.Provider value={{ 
+        <ArweaveContext.Provider value={{
             initing, loading, error,
-            createTx, searchTx, 
+            createTx, searchTx, searchByQuery,
             privateKey: innerSecret?.privateKey,
             arweaveAddress: innerPublic?.arweaveAddress ?? '',
         }}>
@@ -164,10 +170,32 @@ const _createTx = async (arweave: Arweave, privateKey: JWKInterface, content: st
     return { tx, res }
 }
 
+const _searchByQuery = async (arweave: Arweave, tags: Record<string, string>, arweaveAddress?: string) => {
+    const tagsString = Object.entries(tags).map(([name, value]) => `{ name: "${name}", values: ["${value}"] }`).join(',')
+    const ownersString = arweaveAddress ? `owners:["${arweaveAddress}"]` : ''
+    const queryObject = {
+        query:
+            `{
+            transactions (
+                ${ownersString},
+                tags: [ ${tagsString} ]
+            ) {
+                edges {
+                    node {
+                        id
+                    }
+                }
+            }
+        }`
+    };
+    const res = await arweave.api.post('/graphql', queryObject)
+    return res.data
+}
+
 
 const _searchTx = async (arweave: Arweave, query: string) => {
     const res = await arweave.transactions.get(query)
-    return res
+    return res.toJSON()
 }
 
 function parseArweaveKey(key: Record<string, unknown>): JWKInterface | null {

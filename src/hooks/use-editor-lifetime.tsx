@@ -77,9 +77,9 @@ export function useEditorLifetime(editable: boolean = true) {
             }),
             Selection,
         ],
-        onUpdate: () => {
-            // 可以在这里添加更新逻辑
-        },
+        // onUpdate: () => {
+        //     // 可以在这里添加更新逻辑
+        // },
     })
 
     const memoEditor = useMemo(() => {

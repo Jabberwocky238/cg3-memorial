@@ -27,6 +27,7 @@ function AppRoutes() {
         <Route path='/' index element={<HomePage />} />
         <Route path='/explore' element={<ExplorePage />} />
         <Route path='/profile' element={<ProfilePage />} />
+        <Route path='/edit' element={<EditPage />} />
         <Route path='/edit/:aid' element={<EditPage />} />
         <Route path='/article/:aid' element={<ArticlePage />} />
       </Route>

@@ -1,4 +1,5 @@
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
+import { useMemo, memo } from 'react'
 import { useFirebase } from '@/hooks/use-firebase'
 import { Bell01, PlusSquare, Settings01 } from '@untitledui/icons'
 import { ArweaveProvider } from './hooks/use-arweave'
@@ -30,15 +31,17 @@ const navItems = [
 
 function useItemsWithCurrent() {
 	const { pathname } = useLocation()
-	return navItems.map((item) => ({
-		...item,
-		current: item.href === '/' ? pathname === '/' : pathname.startsWith(item.href),
-	}))
+	return useMemo(() => {
+		return navItems.map((item) => ({
+			...item,
+			current: item.href === '/' ? pathname === '/' : pathname.startsWith(item.href),
+		}))
+	}, [pathname])
 }
 
 const actions = [
 	{
-		href: "/edit/new",
+		href: "/edit/",
 		icon: PlusSquare,
 		label: "New Article",
 		tooltipPlacement: "bottom" as const,
@@ -55,16 +58,16 @@ const actions = [
 		label: "Notifications",
 		tooltipPlacement: "bottom" as const
 	},
-]
+] as const
 
-export default function Layout() {
+const Layout = memo(() => {
 	return (
-		<div className={`min-h-dvh flex flex-col `} style={{
+		<div className={`flex flex-col h-dvh overflow-y-hidden`} style={{
 			color: 'var(--color-text-primary)',
 			backgroundColor: 'var(--background-color-primary)',
 		}}>
 			<HeaderNavigation />
-			<main className={`flex-1 `}>
+			<main className={`flex-1`}>
 				<AppStateProvider>
 					<ArweaveProvider>
 						<CashierProvider>
@@ -75,13 +78,13 @@ export default function Layout() {
 			</main>
 		</div>
 	)
-}
+});
 
-const HeaderNavigation = () => {
+export default Layout;
+
+const HeaderNavigation = memo(() => {
 	const items = useItemsWithCurrent()
-	const navigate = useNavigate()
 	const { userFirebase: user } = useFirebase()
-	const actionItems = actions;
 	const { theme, setTheme } = useTheme()
 	const showSecondaryNav = false;
 
@@ -98,7 +101,7 @@ const HeaderNavigation = () => {
 
 					<div className="mt-auto flex flex-col gap-4 px-2 py-4 lg:px-4 lg:py-6">
 						<div className="flex flex-col gap-1">
-							{actionItems.map((item) => (
+							{actions.map((item) => (
 								<NavItemBase
 									key={item.label}
 									type="link"
@@ -157,8 +160,8 @@ const HeaderNavigation = () => {
 						<div className="flex items-center gap-3">
 							{/* {trailingContent} */}
 
-							<div className="flex gap-0.5">
-								{actionItems?.map((item) => (
+						<div className="flex gap-0.5">
+							{actions?.map((item) => (
 									<NavItemButton
 										key={item.label}
 										size="md"
@@ -227,4 +230,4 @@ const HeaderNavigation = () => {
 			</header>
 		</>
 	);
-};
+});
