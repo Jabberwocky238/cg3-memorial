@@ -82,11 +82,9 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
     const _emailSignUp = async (email: string, password: string) => {
         return await emailSignUp(authRef.current!, email, password)
     }
-    const _googleSignIn = async () => {
-        return await googleSignIn(authRef.current!, googleProvider)
-    }
     const _signOut = async () => {
         await signOut(authRef.current!)
+        await authRef.current?.currentUser?.reload()
     }
     const _getUserFirebase = async (uid: string) => {
         return await getFirebaseUser(dbRef.current!, uid)
@@ -105,7 +103,13 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
         await updateProfile(currentUser, obj)
         await setFirebaseUser(dbRef.current!, uid, obj)
     }
-
+    const _googleSignIn = async () => {
+        const { user, credential } = await googleSignIn(authRef.current!, googleProvider)
+        await authRef.current?.currentUser?.reload()
+        await _setUserFirebase(user.uid, {})
+        await navigate('/')
+        return { user, credential }
+    }
     const _emailSignIn = async (email: string, password: string) => {
         const { user } = await emailSignIn(authRef.current!, email, password)
         await authRef.current?.currentUser?.reload()
@@ -119,6 +123,8 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
         return { user }
     }
 
+    // 用于退出登陆后的用户信息更新
+    const [userFirebaseReactive, setUserFirebaseReactive] = useState<User | null>(null)
     useEffect(() => {
         if (!authRef.current || !dbRef.current) return
         setIniting(false)
@@ -130,7 +136,10 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
                     await navigate('/auth#login')
                     return
                 }
-                _setUserFirebase(u.uid, {})
+                await _setUserFirebase(u.uid, {})
+                setUserFirebaseReactive(u)
+            } else {
+                setUserFirebaseReactive(null)
             }
             setLoading(false)
         })
@@ -146,7 +155,7 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
             loading,
 
             auth: authRef.current,
-            userFirebase: authRef.current?.currentUser || null,
+            userFirebase: userFirebaseReactive,
             setUserFirebase: _setUserFirebase,
             getUserFirebase: _getUserFirebase,
 

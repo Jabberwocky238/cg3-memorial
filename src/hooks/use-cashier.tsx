@@ -63,6 +63,7 @@ export const ErrorCashier = {
     InvalidAmount: new Error("Invalid amount"),
     InsufficientBalance: new Error("Insufficient balance"),
     TransferFailed: new Error("Transfer failed"),
+    SelfTransfer: new Error("Self transfer"),
 }
 
 export function CashierProvider({ children }: { children: React.ReactNode }) {
@@ -112,15 +113,19 @@ export function CashierProvider({ children }: { children: React.ReactNode }) {
             userCashier: innerSecret?.userCashier ?? null,
             transfer: async (amount: number, toUid: string) => {
                 if (!innerSecret?.userCashier || !userFirebase) {
+                    console.error("innerSecret?.userCashier || !userFirebase", innerSecret?.userCashier, userFirebase)
                     throw ErrorCashier.UserCashierNotFound
                 }
                 if (toUid === userFirebase.uid) {
-                    throw ErrorCashier.InvalidAmount
+                    console.error("toUid === userFirebase.uid", toUid)
+                    throw ErrorCashier.SelfTransfer
                 }
                 if (amount <= 0) {
+                    console.error("amount <= 0", amount)
                     throw ErrorCashier.InvalidAmount
                 }
                 if (amount > innerSecret.userCashier.balance_usd) {
+                    console.error("amount > innerSecret.userCashier.balance_usd", amount, innerSecret.userCashier.balance_usd)
                     throw ErrorCashier.InsufficientBalance
                 }
                 const idToken = await userFirebase.getIdToken()

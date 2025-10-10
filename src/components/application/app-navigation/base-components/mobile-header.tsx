@@ -18,7 +18,7 @@ import { ButtonUtility } from "@/components/base/buttons/button-utility";
 import { ButtonGroup, ButtonGroupItem } from "@/components/base/button-group/button-group";
 
 interface MobileNavigationHeaderProps {
-    children: (state: OverlayTriggerState) => React.ReactNode
+    children: ((state: OverlayTriggerState) => React.ReactNode) | React.ReactNode
 }
 
 export const MobileNavigationHeader = ({ children }: MobileNavigationHeaderProps) => {
@@ -58,7 +58,7 @@ export const MobileNavigationHeader = ({ children }: MobileNavigationHeaderProps
 
                         <AriaModal className="w-full cursor-auto will-change-transform">
                             <AriaDialog className="h-dvh outline-hidden focus:outline-hidden">
-                                {children(state)}
+                                {typeof children === 'function' ? children(state) : children}
                             </AriaDialog>
                         </AriaModal>
                     </>

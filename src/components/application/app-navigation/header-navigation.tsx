@@ -78,7 +78,7 @@ export const HeaderNavigationBase = ({
     return (
         <>
             <MobileNavigationHeader>
-                <aside className="flex h-full max-w-full flex-col justify-between overflow-auto border-r border-secondary bg-primary pt-4 lg:pt-6">
+                {(state) => <aside className="flex h-full max-w-full flex-col justify-between overflow-auto border-r border-secondary bg-primary pt-4 lg:pt-6">
                     <div className="flex flex-col gap-5 px-4 lg:px-5">
                         <UntitledLogo className="h-8" />
                         <Input shortcut size="sm" aria-label="Search" placeholder="Search" icon={SearchLg} />
@@ -105,29 +105,11 @@ export const HeaderNavigationBase = ({
                             }}>
                                 Toggle Theme
                             </NavItemBase>
-                            {/* <NavItemBase type="link" href="#" icon={LifeBuoy01}>
-                                Support
-                            </NavItemBase>
-                            <NavItemBase
-                                type="link"
-                                href="#"
-                                icon={Settings01}
-                                badge={
-                                    <BadgeWithDot color="success" type="modern" size="sm">
-                                        Online
-                                    </BadgeWithDot>
-                                }
-                            >
-                                Settings
-                            </NavItemBase>
-                            <NavItemBase type="link" href="https://www.untitledui.com/" icon={Settings01}>
-                                Open in browser
-                            </NavItemBase> */}
                         </div>
 
-                        <NavAccountCard items={user ? [user] : []} selectedAccountId={user?.uid} />
+                        <NavAccountCard items={user ? [user] : []} selectedAccountId={user?.uid} state={state} />
                     </div>
-                </aside>
+                </aside>}
             </MobileNavigationHeader>
 
             <header className="max-lg:hidden">

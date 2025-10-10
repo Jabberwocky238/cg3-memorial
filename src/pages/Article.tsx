@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApi, type Article } from '@/hooks/use-backend';
 import { useFirebase } from '@/hooks/use-firebase';
@@ -26,8 +26,6 @@ export default function Article() {
     const [author, setAuthor] = useState<UserInfo | null>(null);
     const [article, setArticle] = useState<Article | null>(null);
     const { userFirebase, getUserFirebase } = useFirebase();
-    const triggerRef = useRef<HTMLButtonElement>(null);
-    const { transfer } = useCashier();
 
     const loadArticleData = async () => {
         if (!aid) {
@@ -86,17 +84,6 @@ export default function Article() {
     const handleBack = () => {
         navigate(-1);
     };
-
-    const handleReward = async () => {
-        if (!article) {
-            alert('文章不存在');
-            return;
-        }
-        await transfer(price, article.uid);
-        console.log('打赏成功');
-    }
-
-    const [price, setPrice] = useState(0);
 
     return (
         <div className="min-h-screen">
@@ -208,12 +195,12 @@ interface ControlPanelProps {
 }
 
 function ControlPanel({ className, editor, article }: ControlPanelProps) {
-    const { aid } = useParams<{ aid: string }>()
-    const [price, setPrice] = useState("0");
+    const [price, setPrice] = useState("");
     const { transfer } = useCashier();
-    const { build, close: _close } = useGlobalPortal();
-    const navigate = useNavigate();
+    const [rewardError, setRewardError] = useState<ReactNode | null>(null);
+    const { userFirebase } = useFirebase();
     const articleMeta = article ? ArticleMeta.fromArticle(article) : null;
+    const navigate = useNavigate();
 
     const handleReward = async () => {
         if (!article) {
@@ -221,19 +208,40 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
             return;
         }
         try {
-            await transfer(parseFloat(price), article.uid);
-            console.log('打赏成功');
+            if (price === "") {
+                setRewardError("请输入打赏金额");
+                return;
+            }
+            const priceFloat = parseFloat(price);
+            console.log("priceFloat", priceFloat);
+            if (isNaN(priceFloat)) {
+                setRewardError("打赏金额无效 NaN");
+                return;
+            }
+            await transfer(priceFloat, article.uid);
+            setRewardError(null);
+            setPrice("");
         } catch (error) {
-            alert('打赏失败' + error);
-            // build('打赏失败', "是否前往充值？", [
-            //     {
-            //         label: "前往充值",
-            //         onClick: () => {
-            //             navigate('/profile');
-            //             _close();
-            //         },
-            //     },
-            // ], false);
+            switch (error) {
+                case ErrorCashier.UserCashierNotFound:
+                    setRewardError("用户账户不存在");
+                    break;
+                case ErrorCashier.InvalidAmount:
+                    setRewardError("打赏金额无效");
+                    break;
+                case ErrorCashier.InsufficientBalance:
+                    setRewardError(<>余额不足 <Button color="secondary" size="sm" onClick={() => navigate('/profile#cashier')}>前往充值</Button></>);
+                    break;
+                case ErrorCashier.TransferFailed:
+                    setRewardError("打赏失败");
+                    break;
+                case ErrorCashier.SelfTransfer:
+                    setRewardError("不能打赏给自己");
+                    break;
+                default:
+                    setRewardError(`打赏失败: ${error}`);
+                    break;
+            }
         }
     }
     // 处理日志HTML
@@ -274,7 +282,7 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
                 >
                     Log HTML D
                 </Button>
-                <ModalButton
+                {userFirebase && userFirebase?.uid !== article?.uid && <ModalButton
                     title="Reward"
                     tooltip="Reward"
                     iconLeading={Coins01}
@@ -289,10 +297,10 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
                         },
                     ]}
                 >
-                    <Label>打赏金额</Label>
+                    <Label className='text-sm'>打赏金额</Label>
                     <Input
-                        type="number"
-                        className="p-4"
+                        type="text"
+                        className="p-4 text-sm w-full"
                         placeholder="请输入打赏金额"
                         value={price}
                         onChange={(e) => {
@@ -301,7 +309,8 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
                             setPrice(e.target.value);
                         }}
                     />
-                </ModalButton>
+                    {rewardError && <p className='text-sm text-error'>{rewardError}</p>}
+                </ModalButton>}
             </div>
         </div>
     )

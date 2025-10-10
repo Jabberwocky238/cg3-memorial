@@ -29,6 +29,7 @@ export function useEditorLifetime(editable: boolean = true) {
     const editor = useEditor({
         immediatelyRender: false, // 立即渲染，避免null
         shouldRerenderOnTransaction: false,
+        editable: editable,
         editorProps: {
             attributes: {
                 autocomplete: "off",
@@ -79,6 +80,7 @@ export function useEditorLifetime(editable: boolean = true) {
         ],
         // onUpdate: () => {
         //     // 可以在这里添加更新逻辑
+        // 不要在这里添加，因为每次更新都会触发，导致性能问题
         // },
     }, [editable, location])
 
