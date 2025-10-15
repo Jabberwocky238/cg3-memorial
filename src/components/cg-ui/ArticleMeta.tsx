@@ -1,59 +1,6 @@
-import type { JSONContent } from "@tiptap/react"
 import { Tag, TagGroup, type TagItem } from "../base/tags/tags"
 import { TagList } from "../base/tags/tags"
-import type { Article } from "@/hooks/use-backend"
-import { useEffect, useState } from "react"
-
-export type TagTreeType = Record<string, string[]>
-
-export interface ArticleData {
-    aid?: string
-    title: string
-    tags: TagTreeType
-    poster?: string
-    content: JSONContent
-}
-
-export class ArticleMeta implements ArticleData {
-    private __mutex: boolean = false
-    static fromArticle(article: Article): ArticleMeta {
-        return new ArticleMeta(
-            article.aid,
-            article.title,
-            JSON.parse(article.tags),
-            // article.poster,
-            undefined,
-            JSON.parse(article.content)
-        )
-    }
-    static fromInterface(article: ArticleData): ArticleMeta {
-        return new ArticleMeta(
-            article.aid,
-            article.title,
-            article.tags,
-            article.poster,
-            article.content
-        )
-    }
-    constructor(
-        public aid?: string,
-        public title: string = 'Untitled',
-        public tags: TagTreeType = {},
-        public poster?: string,
-        public content: JSONContent = {},
-    ) {
-        this.__mutex = false
-    }
-    lock() {
-        this.__mutex = true
-    }
-    unlock() {
-        this.__mutex = false
-    }
-    get isLocked() {
-        return this.__mutex
-    }
-}
+import type { ArticleData } from "@/lib/article-class"
 
 export interface ArticleMetaPanelProps {
     article: ArticleData
@@ -86,7 +33,7 @@ export function ArticleMetaPanel({ article, isDirty = false }: ArticleMetaPanelP
                     </TagGroup>
                 </div>
             ))}
-            <p>封面: {article.poster ? <img src={article.poster} alt="poster" /> : <span className="text-yellow-500">null</span>}</p>
+            <p>封面: {article.posterUrl ? <img src={article.posterUrl} alt="poster" /> : <span className="text-yellow-500">null</span>}</p>
             <p>content-length: <span className="text-gray-500">{JSON.stringify(article.content).length}</span></p>
         </div>
     )

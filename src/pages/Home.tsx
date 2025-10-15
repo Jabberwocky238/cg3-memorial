@@ -1,37 +1,57 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useFirebase } from '../hooks/use-firebase'
 
+import { ChevronLeft, ChevronRight } from "@untitledui/icons";
+import { Carousel } from "@/components/application/carousel/carousel-base";
+
+const CarouselMd = () => {
+	return (
+		<Carousel.Root className="relative aspect-[1.6] max-w-160">
+			<Carousel.PrevTrigger className="absolute top-1/2 left-4 z-10 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-alpha-white/90 p-2 text-fg-secondary outline-focus-ring backdrop-blur-xs focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:bg-disabled_subtle disabled:text-fg-disabled">
+				<ChevronLeft className="size-5" />
+			</Carousel.PrevTrigger>
+			<Carousel.NextTrigger className="absolute top-1/2 right-4 z-10 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-alpha-white/90 p-2 text-fg-secondary outline-focus-ring backdrop-blur-xs focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:bg-disabled_subtle disabled:text-fg-disabled">
+				<ChevronRight className="size-5" />
+			</Carousel.NextTrigger>
+
+			<div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2">
+				<Carousel.IndicatorGroup className="flex gap-2 justify-center bg-black p-2 rounded-full">
+					<Carousel.Indicator index={0} ><div className="bg-white rounded-full w-2 h-2"></div></Carousel.Indicator>
+					<Carousel.Indicator index={1} ><div className="bg-white rounded-full w-2 h-2"></div></Carousel.Indicator>
+					<Carousel.Indicator index={2} ><div className="bg-white rounded-full w-2 h-2"></div></Carousel.Indicator>
+				</Carousel.IndicatorGroup>
+			</div>
+
+			<Carousel.Content className="gap-2">
+				<Carousel.Item className="overflow-hidden rounded-xl">
+					<img alt="Image by Unsplash" src="https://www.untitledui.com/application/plants.webp" className="size-full object-cover" />
+				</Carousel.Item>
+				<Carousel.Item className="overflow-hidden rounded-xl">
+					<img
+						alt="Image by Unsplash"
+						src="https://images.unsplash.com/photo-1484506097116-1bcba4fa7568?q=80&w=2970&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+						className="size-full object-cover"
+					/>
+				</Carousel.Item>
+				<Carousel.Item className="overflow-hidden rounded-xl">
+					<img
+						alt="Image by Unsplash"
+						src="https://images.unsplash.com/photo-1471899236350-e3016bf1e69e?q=80&w=2971&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+						className="size-full object-cover"
+					/>
+				</Carousel.Item>
+			</Carousel.Content>
+		</Carousel.Root>
+	);
+};
+
 export default function HomePage() {
 	const { signOut, userFirebase } = useFirebase()
 	const navigate = useNavigate()
 	return (
 		<div className="w-full h-full grid place-items-center px-4">
 			<div className="w-full max-w-sm space-y-4 text-center">
-				<h1 className="text-xl font-semibold">首页</h1>
-				{userFirebase ? (
-					<div className="space-y-2">
-						<p className="text-sm">已登录：{userFirebase.email ?? userFirebase.displayName ?? userFirebase.uid}</p>
-						<button
-							className="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium"
-							onClick={async () => {
-								await signOut()
-								navigate('/auth')
-							}}
-						>
-							退出登录
-						</button>
-					</div>
-				) : (
-					<div className="space-y-2">
-						<p className="text-sm">你还没有登录</p>
-						<Link
-							to="/auth"
-							className="inline-flex items-center justify-center rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium"
-						>
-							去登录
-						</Link>
-					</div>
-				)}
+				<CarouselMd />
 			</div>
 		</div>
 	)

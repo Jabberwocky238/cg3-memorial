@@ -23,14 +23,15 @@ import { Tag, TagGroup, type TagItem, TagList } from "@/components/base/tags/tag
 import { Input } from "@/components/base/input/input";
 import { Select, type SelectItemType } from "@/components/base/select/select";
 import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/button-group'
-import { ArticleMeta, ArticleMetaPanel, type ArticleMetaPanelProps, type TagTreeType } from '@/components/cg-ui/ArticleMeta'
+import { ArticleMetaPanel, type ArticleMetaPanelProps } from '@/components/cg-ui/ArticleMeta'
+import { type ArticleData, ArticleClass, type TagTreeType } from '@/lib/article-class'
 
 function EditPage() {
   const { aid } = useParams()
   const { userFirebase } = useFirebase()
   const { getArticle } = useApi()
   const { editor } = useEditorLifetime(true)
-  const articleRef = useRef<ArticleMeta>(new ArticleMeta())
+  const articleRef = useRef<ArticleClass>(new ArticleClass())
   const { LOG_append, LOG_clear, setError } = useAppState()
 
   const tryLoadArticle = async (aid: string) => {
@@ -81,9 +82,17 @@ function EditPage() {
   }, [aid])
 
   return (
-    <div className="space-y-4 relative">
-      <ControlPanelContainer editor={editor} article={articleRef.current} />
-      {editor && <MySimpleEditor editor={editor} />}
+    <div className="h-full flex flex-col">
+      <div className="flex-1 flex gap-4 overflow-hidden justify-center">
+        <div className="lg:w-5/8 max-lg:w-full overflow-auto bg-blue-500 border border-secondary rounded-lg">
+          {editor && <MySimpleEditor editor={editor} />}
+        </div>
+        <ControlPanelContainer
+          className="lg:w-2/8 max-lg:hidden overflow-auto dark:bg-red-800 bg-red-100"
+          editor={editor}
+          article={articleRef.current}
+        />
+      </div>
     </div>
   )
 }
@@ -113,7 +122,7 @@ function MySimpleEditor({ editor }: { editor: Editor | null }) {
   }, [isMobile, mobileView])
 
   return (
-    <div className="simple-editor-wrapper">
+    <div className="h-full w-full overflow-hidden">
       <EditorContext.Provider value={{ editor }}>
         <Toolbar
           data-variant="fixed"
@@ -153,26 +162,26 @@ function MySimpleEditor({ editor }: { editor: Editor | null }) {
 interface ControlPanelProps {
   className?: string
   editor: Editor | null
-  article: ArticleMeta // readonly or needless to update renderer
+  article: ArticleData // readonly or needless to update renderer
 }
 
 function ControlPanelContainer(props: ControlPanelProps) {
   const hiddenClassPair = ["lg:hidden", "max-lg:hidden"]
+  const { className, ...rest } = props
   return (
     <>
       <MobilePortal OpenIcon={ArrowBlockUp} CloseIcon={CloseIcon} hiddenClass={hiddenClassPair[0]}>
-        <ControlPanel {...props} />
+        <ControlPanel {...rest} />
       </MobilePortal>
       <div
-        className={`fixed left-8 bottom-8 
-          bg-gray-100 dark:bg-gray-800
-          transform rounded-lg
-          border border-secondary 
-          z-30 overflow-hidden 
-          ${hiddenClassPair[1]}`}
-        style={{ width: '22vw', height: '70%' }}
+        className={`                  
+            bg-gray-100 dark:bg-gray-800
+            transform rounded-lg
+            border border-secondary 
+            z-30 overflow-hidden 
+            ${hiddenClassPair[1]} ${className}`}
       >
-        <ControlPanel {...props} />
+        <ControlPanel {...rest} />
       </div>
     </>
   )
@@ -248,10 +257,10 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
   }
 
   return (
-    <div className={`h-full w-full p-4 space-y-4 bg-primary ${className} overflow-auto`}>
+    <div className={`h-full w-full p-4 space-y-4 ${className}`}>
       <ArticleMetaPanel article={article} />
 
-      <div className="grid max-lg:grid-cols-3 lg:grid-cols-1 gap-2 ">
+      <div className="grid max-lg:grid-cols-2 lg:grid-cols-1 gap-2 ">
         <Button
           isLoading={false} showTextWhileLoading iconLeading={Archive}
           color="secondary" size="sm" onClick={handleLogContent}

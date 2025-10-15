@@ -15,7 +15,8 @@ import { ErrorCashier, useCashier } from '@/hooks/use-cashier';
 import { useArweave } from '@/hooks/use-arweave';
 import { MobilePortal, ModalButton } from '@/components/application/app-navigation/base-components/mobile-header';
 import { CloseIcon } from '@/components/tiptap-icons/close-icon';
-import { ArticleMeta, ArticleMetaPanel } from '@/components/cg-ui/ArticleMeta';
+import { ArticleMetaPanel } from '@/components/cg-ui/ArticleMeta';
+import { ArticleClass, type ArticleData } from '@/lib/article-class';
 
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
@@ -86,49 +87,21 @@ export default function Article() {
     };
 
     return (
-        <div className="min-h-screen">
-            <div className="py-8">
-                <header className="max-w-4xl mx-auto px-4 flex items-center justify-start space-x-4">
-                    <div className="grid md:grid-cols-2 grid-cols-1 gap-4">
-                        <div className="flex items-center justify-start space-x-4">
-                            {/* 返回按钮 */}
-                            <Button iconLeading={ArrowLeft} color='tertiary' onClick={handleBack}>
-                                返回
-                            </Button>
-                            <AvatarLabelGroup
-                                size="md"
-                                src={author?.photoURL}
-                                alt={author?.displayName || '未设置'}
-                                title={author?.displayName || '未设置'}
-                                subtitle={author?.email || '未设置'}
-                            />
-                        </div>
-                        <div className="flex items-center justify-between space-x-4">
-                            <div>
-                                <p className="text-sm">
-                                    发布于 {formatDate(article?.created_at ?? '')}
-                                    {article?.updated_at !== article?.created_at && (
-                                        <span className="ml-2">
-                                            · 更新于 {formatDate(article?.updated_at ?? '')}
-                                        </span>
-                                    )}
-                                </p>
-                                <p className='text-sm truncate md:max-w-[300px] max-w-[200px]'>文章 ID: {article?.aid}</p>
-                            </div>
-                            {userFirebase && userFirebase?.uid === article?.uid && (
-                                <Button iconLeading={Edit03} color='tertiary' onClick={() => navigate(`/edit/${article?.aid}`)}>
-                                    编辑
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                </header>
-                <ControlPanelContainer editor={editor} article={article} />
-                {editor && <EditorContent
+        <div className="h-full flex flex-col">
+            <div className="flex-1 flex gap-4 overflow-hidden justify-center">
+                <div className="lg:w-5/8 max-lg:w-full overflow-auto bg-blue-500 border border-secondary rounded-lg">
+                    {editor && <EditorContent
+                        editor={editor}
+                        role="presentation"
+                        className="simple-editor-content"
+                    />}
+                </div>
+                <ControlPanelContainer
+                    className="lg:w-2/8 max-lg:hidden overflow-auto dark:bg-red-800 bg-red-100 border border-secondary rounded-lg"
                     editor={editor}
-                    role="presentation"
-                    className="simple-editor-content"
-                />}
+                    article={article}
+                    author={author}
+                />
             </div>
         </div>
     );
@@ -168,21 +141,20 @@ function ArticleArweaveInfo({ pageId }: { pageId?: string }) {
 
 function ControlPanelContainer(props: ControlPanelProps) {
     const hiddenClassPair = ["lg:hidden", "max-lg:hidden"]
+    const { className, ...rest } = props
     return (
         <>
             <MobilePortal OpenIcon={ArrowBlockUp} CloseIcon={CloseIcon} hiddenClass={hiddenClassPair[0]}>
-                <ControlPanel {...props} />
+                <ControlPanel {...rest} />
             </MobilePortal>
             <div
-                className={`fixed left-8 bottom-8 
-            bg-gray-100 dark:bg-gray-800
-            transform rounded-lg
-            border border-secondary 
-            z-30 overflow-hidden 
-            ${hiddenClassPair[1]}`}
-                style={{ width: '22vw', height: '70%' }}
+                className={`
+                    bg-gray-100 dark:bg-gray-800
+                transform
+                z-30 overflow-hidden 
+                ${hiddenClassPair[1]} ${className}`}
             >
-                <ControlPanel {...props} />
+                <ControlPanel {...rest} />
             </div>
         </>
     )
@@ -192,15 +164,16 @@ interface ControlPanelProps {
     editor: Editor | null
     article: Article | null
     className?: string
+    author: UserInfo | null
 }
 
-function ControlPanel({ className, editor, article }: ControlPanelProps) {
+function ControlPanel({ className, editor, article, author }: ControlPanelProps) {
     const [price, setPrice] = useState("");
     const { transfer } = useCashier();
     const [rewardError, setRewardError] = useState<ReactNode | null>(null);
     const { userFirebase } = useFirebase();
-    const articleMeta = article ? ArticleMeta.fromArticle(article) : null;
-    const navigate = useNavigate();
+    const articleMeta = article ? ArticleClass.fromDatabase(article) : null;
+    const navigate = useNavigate(); 
 
     const handleReward = async () => {
         if (!article) {
@@ -249,11 +222,29 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
         console.log(editor?.getHTML())
     }
 
+    const isEditable = userFirebase?.uid === article?.uid
+    const handleEdit = () => {
+        navigate(`/edit/${article?.aid}`)
+    }
+
     return (
-        <div className={`h-full w-full p-4 space-y-4 bg-primary ${className}`}>
-
+        <div className={`h-full w-full p-4 space-y-4 ${className}`}>
             <ArticleArweaveInfo pageId={article?.aid} />
-
+            <AvatarLabelGroup
+                size="md"
+                src={author?.photoURL}
+                alt={author?.displayName || '未设置'}
+                title={author?.displayName || '未设置'}
+                subtitle={author?.email || '未设置'}
+            />
+            <p className="text-sm">
+                发布于 {formatDate(article?.created_at ?? '')}
+                {article?.updated_at !== article?.created_at && (
+                    <span className="ml-2">
+                        · 更新于 {formatDate(article?.updated_at ?? '')}
+                    </span>
+                )}
+            </p>
             {articleMeta && <ArticleMetaPanel article={articleMeta} />}
 
             <div className="grid max-lg:grid-cols-2 lg:grid-cols-1 gap-2 ">
@@ -281,6 +272,13 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
                     color="secondary" size="sm" onClick={handleLogHTML}
                 >
                     Log HTML D
+                </Button>
+                <Button
+                    isLoading={false} showTextWhileLoading iconLeading={Edit03}
+                    disabled={!isEditable} className={isEditable ? "" : "opacity-50 cursor-not-allowed pointer-events-none"}
+                    color="secondary" size="sm" onClick={handleEdit}
+                >
+                    Edit
                 </Button>
                 {userFirebase && userFirebase?.uid !== article?.uid && <ModalButton
                     title="Reward"

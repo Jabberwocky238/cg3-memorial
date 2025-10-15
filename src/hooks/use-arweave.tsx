@@ -75,7 +75,7 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
                 await setFirebaseSecret(user.uid, { [ARWEAVE_JWK]: key })
                 console.log('Arweave 私钥创建成功')
             } else {
-                console.log('Arweave 私钥加载成功')
+                console.log('Arweave 私钥加载成功', key)
             }
 
             const address = await arweaveRef.current.wallets.jwkToAddress(key)
@@ -161,11 +161,12 @@ const _createTx = async (arweave: Arweave, privateKey: JWKInterface, content: st
     const isVerify = await arweave.transactions.verify(tx)
     console.log(isVerify)
 
-    const res = await arweave.api.post('tx', tx, {
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-        },
-    })
+    const res = await arweave.transactions.post(tx)
+    // const res = await arweave.api.post('tx', tx, {
+    //     headers: {
+    //         'Access-Control-Allow-Origin': '*',
+    //     },
+    // })
     console.log(res)
     return { tx, res }
 }
