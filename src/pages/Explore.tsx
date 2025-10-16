@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppState } from '@/hooks/use-app-state';
 import type { UserInfo } from 'firebase/auth';
 import type { Content, JSONContent } from '@tiptap/react';
+import { formatDate } from '@/utils/cg-utils';
 
 interface ArticleWithUser extends Article {
   userInfo?: UserInfo
@@ -84,15 +85,6 @@ function ArticleItem({ article, onClick }: ArticleItemProps) {
     const image = contents.find((content) => content.type === 'image');
     return image?.attrs?.src;
   }, [article]);
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   if (!article) {
     return null;

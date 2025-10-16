@@ -15,8 +15,9 @@ import { ErrorCashier, useCashier } from '@/hooks/use-cashier';
 import { useArweave } from '@/hooks/use-arweave';
 import { MobilePortal, ModalButton } from '@/components/application/app-navigation/base-components/mobile-header';
 import { CloseIcon } from '@/components/tiptap-icons/close-icon';
-import { ArticleMetaPanel } from '@/components/cg-ui/ArticleMeta';
+import { ArticleMetaPanel } from '@/components/cg-ui/ArticleMetaPanel';
 import { ArticleClass, type ArticleData } from '@/lib/article-class';
+import { formatDate } from '@/utils/cg-utils';
 
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
@@ -89,7 +90,7 @@ export default function Article() {
     return (
         <div className="h-full flex flex-col">
             <div className="flex-1 flex gap-4 overflow-hidden justify-center">
-                <div className="lg:w-5/8 max-lg:w-full overflow-auto bg-blue-500 border border-secondary rounded-lg">
+                <div className="lg:w-5/8 max-lg:w-full overflow-auto dark:bg-blue-800 bg-blue-100 border border-secondary rounded-lg">
                     {editor && <EditorContent
                         editor={editor}
                         role="presentation"
@@ -107,15 +108,7 @@ export default function Article() {
     );
 }
 
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-};
+
 
 function ArticleArweaveInfo({ pageId }: { pageId?: string }) {
     if (!pageId) return null;

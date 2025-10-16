@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, type RefObject, useContext } from 'react'
 import type { Key } from '@react-types/shared'
 import { useParams } from 'react-router-dom'
 import { useFirebase } from '@/hooks/use-firebase'
@@ -23,15 +23,38 @@ import { Tag, TagGroup, type TagItem, TagList } from "@/components/base/tags/tag
 import { Input } from "@/components/base/input/input";
 import { Select, type SelectItemType } from "@/components/base/select/select";
 import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/button-group'
-import { ArticleMetaPanel, type ArticleMetaPanelProps } from '@/components/cg-ui/ArticleMeta'
+import { ArticleMetaPanel, type ArticleMetaPanelProps } from '@/components/cg-ui/ArticleMetaPanel'
 import { type ArticleData, ArticleClass, type TagTreeType } from '@/lib/article-class'
+import { createContext } from 'react'
+
+const EditContext = createContext<{
+  articleRef: RefObject<ArticleClass>
+} | null>(null)
+
+
+export default function EditPageWrapper() {
+  const articleRef = useRef<ArticleClass>(new ArticleClass())
+  return (
+    <EditContext.Provider value={{ articleRef }}>
+      <EditPage />
+    </EditContext.Provider>
+  )
+}
+
+function useEditContext() {
+  const context = useContext(EditContext)
+  if (!context) {
+    throw new Error('useEditContext must be used within an EditContext.Provider')
+  }
+  return context
+}
 
 function EditPage() {
   const { aid } = useParams()
   const { userFirebase } = useFirebase()
   const { getArticle } = useApi()
   const { editor } = useEditorLifetime(true)
-  const articleRef = useRef<ArticleClass>(new ArticleClass())
+  const { articleRef } = useEditContext()
   const { LOG_append, LOG_clear, setError } = useAppState()
 
   const tryLoadArticle = async (aid: string) => {
@@ -90,17 +113,9 @@ function EditPage() {
         <ControlPanelContainer
           className="lg:w-2/8 max-lg:hidden overflow-auto dark:bg-red-800 bg-red-100"
           editor={editor}
-          article={articleRef.current}
         />
       </div>
     </div>
-  )
-}
-
-
-export default function EditPageWrapper() {
-  return (
-    <EditPage />
   )
 }
 
@@ -162,7 +177,6 @@ function MySimpleEditor({ editor }: { editor: Editor | null }) {
 interface ControlPanelProps {
   className?: string
   editor: Editor | null
-  article: ArticleData // readonly or needless to update renderer
 }
 
 function ControlPanelContainer(props: ControlPanelProps) {
@@ -187,13 +201,15 @@ function ControlPanelContainer(props: ControlPanelProps) {
   )
 }
 
-function ControlPanel({ className, editor, article }: ControlPanelProps) {
+function ControlPanel({ className, editor }: ControlPanelProps) {
+  const { articleRef } = useEditContext()
   const { createTx } = useArweave()
   const { theme } = useTheme()
   const [isDirty, setIsDirty] = useState(false)
   // 监听编辑器内容变化，更新标题
   useEffect(() => {
     if (!editor) return
+    console.log('Edit: 监听编辑器内容变化')
     const timer = setInterval(() => {
       // 找到第一个type: heading, attr: level: 1, 的text
       const heading = editor.state.doc.content.content.find((node) => {
@@ -202,10 +218,12 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
         return type.name === 'heading' && attrs.level === 1
       })
       if (!heading) {
-        article.title = 'Untitled'
+        articleRef.current.title = 'Untitled'
+        console.log('Edit: 未找到标题', articleRef.current.title)
         return
       }
-      article.title = heading?.content.content[0].text ?? 'Untitled'
+      articleRef.current.title = heading?.content.content[0].text ?? 'Untitled'
+      console.log('Edit: 找到标题', articleRef.current.title)
       setIsDirty(true)
     }, 1000)
     return () => clearInterval(timer)
@@ -239,10 +257,10 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
 
     setIsUpchaining(true)
     try {
-      const template = templateMake(html, article.title, theme === 'dark')
+      const template = templateMake(html, articleRef.current.title, theme === 'dark')
       const { tx, res } = await createTx(template, [
         ['Content-Type', 'text/html'],
-        ['Title', article.title],
+        ['Title', articleRef.current.title],
         ['Type', 'file'],
         ['User-Agent', 'Permane-Inc'],
       ])
@@ -258,7 +276,7 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
 
   return (
     <div className={`h-full w-full p-4 space-y-4 ${className}`}>
-      <ArticleMetaPanel article={article} />
+      <ArticleMetaPanel article={articleRef.current} />
 
       <div className="grid max-lg:grid-cols-2 lg:grid-cols-1 gap-2 ">
         <Button
@@ -300,9 +318,9 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
         >
           {(close) => <TagsPanel
             close={close}
-            getTags={() => article.tags}
+            getTags={() => articleRef.current.tags}
             setTags={(tags) => {
-              article.tags = tags;
+              articleRef.current.tags = tags;
               setIsDirty(true)
             }}
           />}
@@ -313,7 +331,7 @@ function ControlPanel({ className, editor, article }: ControlPanelProps) {
           iconLeading={CheckCircle}
           color="secondary" size="sm"
         >
-          {(close) => <ArticleMetaEditPanel close={close} article={article} setIsDirty={setIsDirty} />}
+          {(close) => <ArticleMetaEditPanel close={close} article={articleRef.current} setIsDirty={setIsDirty} />}
         </ModalButton>
         <Button
           isLoading={isUpchaining} showTextWhileLoading iconLeading={Archive}
