@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, type RefObject, useContext } from 'react'
 import type { Key } from '@react-types/shared'
 import { useParams } from 'react-router-dom'
 import { useFirebase } from '@/hooks/use-firebase'
-import { useApi } from '@/hooks/use-backend'
+import api from '@/lib/api'
 import { useArweave } from '@/hooks/use-arweave'
 import { useTheme } from '@/hooks/use-theme'
 import { Archive, ArrowBlockUp, ArrowBlockDown, Edit03, Trash01, CheckCircle, XClose } from "@untitledui/icons";
@@ -52,14 +52,13 @@ function useEditContext() {
 function EditPage() {
   const { aid } = useParams()
   const { userFirebase } = useFirebase()
-  const { getArticle } = useApi()
   const { editor } = useEditorLifetime(true)
   const { articleRef } = useEditContext()
   const { LOG_append, LOG_clear, setError } = useAppState()
 
   const tryLoadArticle = async (aid: string) => {
     console.log('Edit: 开始加载文章', aid)
-    const result = await getArticle(aid)
+    const result = await api.article.get(aid)
     if (result.data) {
       const isBelongToUser = result.data.uid === userFirebase?.uid
       console.log('Edit: 文章数据加载成功', result.data)
@@ -486,18 +485,17 @@ interface ArticleMetaEditPanelProps extends ArticleMetaPanelProps {
 export function ArticleMetaEditPanel({ article, isDirty, setIsDirty, close }: ArticleMetaEditPanelProps) {
   const [started, setStarted] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
-  const { createArticle, updateArticle } = useApi()
   const { userFirebase } = useFirebase()
   const handlePublish = async () => {
     if (!userFirebase?.uid) return
     setStarted(true)
     setIsPublishing(true)
     try {
-      const json = article.content
+      const json = article.content as JSONContent
       if (article.aid) {
-        await updateArticle(article.aid, article.title, JSON.stringify(json), JSON.stringify(article.tags))
+        await api.article.update(article.aid, article.title, JSON.stringify(json), JSON.stringify(article.tags))
       } else {
-        await createArticle(userFirebase?.uid, article.title, JSON.stringify(json), JSON.stringify(article.tags))
+        await api.article.create(userFirebase?.uid, article.title, JSON.stringify(json), JSON.stringify(article.tags))
       }
       console.log('文章发布成功')
     } catch (error) {

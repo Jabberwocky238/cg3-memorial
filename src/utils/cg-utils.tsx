@@ -1,3 +1,5 @@
+import { LoadingIndicator } from "@/components/application/loading-indicator/loading-indicator"
+
 export const copyToClipboard = async (text: string, type: string) => {
     try {
         await navigator.clipboard.writeText(text)
@@ -17,3 +19,4 @@ export const formatDate = (dateString: string) => {
         minute: '2-digit',
     });
 };
+

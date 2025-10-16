@@ -15,7 +15,7 @@ import { Input } from './components/base/input/input'
 import { SearchLg } from '@untitledui/icons'
 import { cx } from './utils/cx'
 import { DialogTrigger, Tooltip } from 'react-aria-components'
-import { UntitledLogo } from './components/foundations/logo/untitledui-logo'
+import { KMMemorialLogo, UntitledLogo } from './components/foundations/logo/untitledui-logo'
 import { Button } from './components/base/buttons/button'
 import { Avatar } from './components/base/avatar/avatar'
 import { Popover } from 'react-aria-components'
@@ -81,7 +81,7 @@ const HeaderNavigation = memo(() => {
 			<MobileNavigationHeader>
 				{(state) => (<aside className="flex h-full max-w-full flex-col justify-between overflow-auto border-r border-secondary bg-primary pt-4 lg:pt-6">
 					<div className="flex flex-col gap-5 px-4 lg:px-5">
-						<UntitledLogo className="h-8" />
+						<KMMemorialLogo />
 						<Input shortcut size="sm" aria-label="Search" placeholder="Search" icon={SearchLg} />
 					</div>
 
@@ -130,7 +130,7 @@ const HeaderNavigation = memo(() => {
 								href="/"
 								className="rounded-xs outline-focus-ring focus-visible:outline-2 focus-visible:outline-offset-2"
 							>
-								<UntitledLogo className="h-8" />
+								<KMMemorialLogo />
 							</a>
 
 							<nav>

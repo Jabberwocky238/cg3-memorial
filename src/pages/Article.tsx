@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useApi, type Article } from '@/hooks/use-backend';
+import api, { type ArticleDAO } from '@/lib/api';
 import { useFirebase } from '@/hooks/use-firebase';
 import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group';
 import { Button } from '@/components/base/buttons/button';
@@ -19,21 +19,32 @@ import { ArticleMetaPanel } from '@/components/cg-ui/ArticleMetaPanel';
 import { ArticleClass, type ArticleData } from '@/lib/article-class';
 import { formatDate } from '@/utils/cg-utils';
 
+const ArticleContext = createContext<{
+    article: ArticleDAO
+    author?: UserInfo
+} | null>(null);
+
+export function useArticlContext() {
+    const context = useContext(ArticleContext);
+    if (!context) {
+        throw new Error('useArticlContext must be used within a ArticleContext');
+    }
+    return context;
+}
+
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
-    const navigate = useNavigate();
-    const { getArticle } = useApi();
     const { editor } = useEditorLifetime(false);
     const { LOG_append, LOG_clear, setError } = useAppState();
     const [author, setAuthor] = useState<UserInfo | null>(null);
-    const [article, setArticle] = useState<Article | null>(null);
+    const [article, setArticle] = useState<ArticleDAO | null>(null);
     const { userFirebase, getUserFirebase } = useFirebase();
 
     const loadArticleData = async () => {
         if (!aid) {
             throw new Error('文章 ID 无效');
         }
-        const result = await getArticle(aid);
+        const result = await api.article.get(aid);
         if (result.error) {
             throw new Error('Article: 加载文章失败' + result.error);
         }
@@ -83,28 +94,28 @@ export default function Article() {
         }
     }, [article, editor]);
 
-    const handleBack = () => {
-        navigate(-1);
-    };
+    if (!article || !author) {
+        return null;
+    }
 
     return (
-        <div className="h-full flex flex-col">
-            <div className="flex-1 flex gap-4 overflow-hidden justify-center">
-                <div className="lg:w-5/8 max-lg:w-full overflow-auto dark:bg-blue-800 bg-blue-100 border border-secondary rounded-lg">
-                    {editor && <EditorContent
+        <ArticleContext.Provider value={{ article, author }}>
+            <div className="h-full flex flex-col">
+                <div className="flex-1 flex gap-4 overflow-hidden justify-center">
+                    <div className="lg:w-5/8 max-lg:w-full overflow-auto dark:bg-blue-800 bg-blue-100 border border-secondary rounded-lg">
+                        {editor && <EditorContent
+                            editor={editor}
+                            role="presentation"
+                            className="simple-editor-content"
+                        />}
+                    </div>
+                    <ControlPanelContainer
+                        className="lg:w-2/8 max-lg:hidden overflow-auto dark:bg-red-800 bg-red-100 border border-secondary rounded-lg"
                         editor={editor}
-                        role="presentation"
-                        className="simple-editor-content"
-                    />}
+                    />
                 </div>
-                <ControlPanelContainer
-                    className="lg:w-2/8 max-lg:hidden overflow-auto dark:bg-red-800 bg-red-100 border border-secondary rounded-lg"
-                    editor={editor}
-                    article={article}
-                    author={author}
-                />
             </div>
-        </div>
+        </ArticleContext.Provider>
     );
 }
 
@@ -155,18 +166,17 @@ function ControlPanelContainer(props: ControlPanelProps) {
 
 interface ControlPanelProps {
     editor: Editor | null
-    article: Article | null
     className?: string
-    author: UserInfo | null
 }
 
-function ControlPanel({ className, editor, article, author }: ControlPanelProps) {
+function ControlPanel({ className, editor }: ControlPanelProps) {
+    const { article, author } = useArticlContext();
     const [price, setPrice] = useState("");
     const { transfer } = useCashier();
     const [rewardError, setRewardError] = useState<ReactNode | null>(null);
     const { userFirebase } = useFirebase();
-    const articleMeta = article ? ArticleClass.fromDatabase(article) : null;
-    const navigate = useNavigate(); 
+    const articleMeta = article ? ArticleClass.fromDAO(article) : null;
+    const navigate = useNavigate();
 
     const handleReward = async () => {
         if (!article) {

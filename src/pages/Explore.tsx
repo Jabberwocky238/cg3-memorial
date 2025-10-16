@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useApi, type Article } from '@/hooks/use-backend';
+import api, { type ArticleDAO } from '@/lib/api';
 import { useFirebase } from '@/hooks/use-firebase';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '@/hooks/use-app-state';
@@ -7,26 +7,23 @@ import type { UserInfo } from 'firebase/auth';
 import type { Content, JSONContent } from '@tiptap/react';
 import { formatDate } from '@/utils/cg-utils';
 
-interface ArticleWithUser extends Article {
-  userInfo?: UserInfo
-}
+type ArticleWithUser = ArticleDAO & { userInfo?: UserInfo }
 
 export default function Explore() {
   const { getUserFirebase } = useFirebase();
   const { LOG_append, LOG_clear, setError } = useAppState();
   const [articles, setArticles] = useState<ArticleWithUser[]>([]);
-  const { listArticles } = useApi();
   const navigate = useNavigate();
 
   const loadArticles = async () => {
-    const result = await listArticles();
+    const result = await api.article.list();
     if (result.error) {
       throw new Error(result.error);
     }
     if (result.data) {
       // 为每篇文章获取用户信息
       const articlesWithUser = await Promise.all(
-        result.data.map(async (article: Article) => {
+        result.data.map(async (article: ArticleDAO) => {
           try {
             const userInfo = await getUserFirebase(article.uid);
             return {

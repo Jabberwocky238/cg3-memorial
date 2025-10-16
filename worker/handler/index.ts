@@ -1,11 +1,19 @@
-import { createArticle, deleteArticle, getArticleById, listArticles, updateArticle } from './db'
-import { middlewareReadJson, responseJson } from './utils'
+import { createArticle, deleteArticle, getArticleById, listArticles, updateArticle } from '../db'
+import { middlewareReadJson, responseJson } from '../utils'
+import {
+  handleCreateArTxRecord,
+  handleDeleteArTxRecord,
+  handleGetArTxRecord,
+  handleListArTxRecordsByUid
+} from './handle-ar_tx_record'
 
 function _parseArticleIdFromUrl(request: Request): string | null {
   const url = new URL(request.url)
   const match = url.pathname.match(/^\/api\/articles\/(.+)$/)
   return match ? decodeURIComponent(match[1]) : null
 }
+
+
 
 export async function handleListArticles(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
   const items = await listArticles(env)
@@ -48,3 +56,6 @@ export async function handleDeleteArticle(request: Request, env: Env, context: E
   if (!ok) return await responseJson({ error: 'Not Found' }, { status: 404 })
   return new Response(null, { status: 204 })
 }
+
+
+export { handleCreateArTxRecord, handleDeleteArTxRecord, handleGetArTxRecord, handleListArTxRecordsByUid }

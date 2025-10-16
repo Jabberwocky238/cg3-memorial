@@ -4,6 +4,10 @@ import {
   handleGetArticle,
   handleUpdateArticle,
   handleDeleteArticle,
+  handleCreateArTxRecord,
+  handleGetArTxRecord,
+  handleListArTxRecordsByUid,
+  handleDeleteArTxRecord,
 } from './handler'
 
 type Route = [
@@ -28,7 +32,11 @@ export default {
     routes.push([handleDeleteArticle, '/api/articles/', 'DELETE'])
     routes.push([handleListArticles, '/api/articles', 'GET'])
     routes.push([handleCreateArticle, '/api/articles', 'POST'])
-
+    // AR Tx Record APIs
+    routes.push([handleCreateArTxRecord, '/api/ar_tx_records', 'POST'])
+    routes.push([handleGetArTxRecord, '/api/ar_tx_records/', 'GET'])
+    routes.push([handleListArTxRecordsByUid, '/api/ar_tx_records/by_uid/', 'GET'])
+    routes.push([handleDeleteArTxRecord, '/api/ar_tx_records/', 'DELETE'])
     // 兜底
     routes.push([handleHelloWorld, '/', 'GET']) 
     const route = routes.find((route) => route[2] === method && url.pathname.startsWith(route[1]));

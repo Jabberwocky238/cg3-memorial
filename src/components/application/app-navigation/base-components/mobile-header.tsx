@@ -11,7 +11,7 @@ import {
     type OverlayTriggerState,
     Pressable,
 } from "react-aria-components";
-import { UntitledLogo } from "@@/foundations/logo/untitledui-logo";
+import { KMMemorialLogo, UntitledLogo } from "@@/foundations/logo/untitledui-logo";
 import { cx } from "@/utils/cx";
 import { Button } from "@/components/base/buttons/button";
 import { ButtonUtility } from "@/components/base/buttons/button-utility";
@@ -25,7 +25,7 @@ export const MobileNavigationHeader = ({ children }: MobileNavigationHeaderProps
     return (
         <AriaDialogTrigger>
             <header className="flex h-16 items-center justify-between border-b border-secondary bg-primary py-3 pr-2 pl-4 lg:hidden">
-                <UntitledLogo />
+                <KMMemorialLogo />
 
                 <AriaButton
                     aria-label="Expand navigation menu"

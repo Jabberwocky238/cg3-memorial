@@ -1,4 +1,4 @@
-import type { Article } from "@/hooks/use-backend"
+import type { ArticleDAO } from "@/lib/api"
 import type { Editor, JSONContent } from "@tiptap/react"
 
 export type TagTreeType = Record<string, string[]>
@@ -46,7 +46,7 @@ export class ArticleClass extends Mutex implements ArticleData {
         return articleClass
     }
 
-    static fromDatabase(article: Article): ArticleClass {
+    static fromDAO(article: ArticleDAO): ArticleClass {
         const articleClass = new ArticleClass()
         articleClass.aid = article.aid
         articleClass.title = article.title

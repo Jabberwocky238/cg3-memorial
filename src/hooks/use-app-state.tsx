@@ -56,6 +56,17 @@ const ErrorPage = memo(({ error }: { error: string | null }) => {
     )
 })
 
+
+export function LoadingErrorHelper({ children, loading, error }: { children: React.ReactNode, loading: boolean, error: string | null }) {
+    if (error) {
+        return <ErrorPage error={error} />
+    }
+    if (loading) {
+        return <LoadingPage><></></LoadingPage>
+    }
+    return children
+}
+
 function loadingLogsReducer(state: string[], action: string | 'clear') {
     if (action === 'clear') {
         return []
