@@ -6,13 +6,15 @@
 
 # 前端逻辑
 
-pnpm管理器，firebase认证系统，untitledUI组件库，react router dom导航，tailwindcss
+bun管理器，firebase认证系统，untitledUI+tremor组件库，react router dom导航，tailwindcss
 
-contexts/ 是hooks和providers
+hooks/ 是hooks和providers
 
 components/ 是所有无状态组件，状态由外部传入
 
 pages/ 是所有页面组件，管理状态
+
+lib/ 是所有工具函数
 
 # 后端逻辑
 

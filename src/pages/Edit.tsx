@@ -82,6 +82,13 @@ function EditPage() {
 
   useEffect(() => {
     if (!aid) { // 如果文章 ID 为空，则认为创建新文章
+      // 清空文章数据
+      articleRef.current.lock()
+      articleRef.current.aid = ''
+      articleRef.current.title = ''
+      articleRef.current.tags = {}
+      articleRef.current.content = {}
+      articleRef.current.unlock()
       return
     }
     if (!isUUID(aid)) {
