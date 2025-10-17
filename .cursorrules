@@ -16,6 +16,10 @@ pages/ 是所有页面组件，管理状态
 
 lib/ 是所有工具函数
 
+所有的组件错误处理直接throw，因为有外部的error boundary处理
+
+所有的组件loading过程考虑使用骨架屏，使用useLoading返回值进行处理
+
 # 后端逻辑
 
 在db.s文件里写数据库交互，在handler.ts里写请求处理, types.ts里写数据库类型

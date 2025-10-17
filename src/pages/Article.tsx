@@ -7,9 +7,11 @@ import { Button } from '@/components/base/buttons/button';
 import { Archive, ArrowBlockUp, ArrowLeft, Coins01, Edit03 } from '@untitledui/icons';
 import { useEditorLifetime } from '@/hooks/use-editor-lifetime';
 import { Editor, EditorContent } from '@tiptap/react';
-import { isUUID, useAppState, useGlobalPortal } from '@/hooks/use-app-state';
+import { isUUID } from '@/utils/cg-utils';
 import type { UserInfo } from 'firebase/auth';
 import { Input } from "react-aria-components";
+import { EasyError, ErrorThenNavigate } from '@/hooks/use-error';
+import { LoadingPage, useLoading } from '@/hooks/use-loading';
 import { Label } from '@/components/base/input/label';
 import { ErrorCashier, useCashier } from '@/hooks/use-cashier';
 import { useArweave } from '@/hooks/use-arweave';
@@ -36,60 +38,42 @@ export function useArticlContext() {
 export default function Article() {
     const { aid } = useParams<{ aid: string }>();
     const { editor } = useEditorLifetime(false);
-    const { LOG_append, LOG_clear, setError } = useAppState();
-    const [author, setAuthor] = useState<UserInfo | null>(null);
-    const [article, setArticle] = useState<ArticleDAO | null>(null);
     const { userFirebase, getUserFirebase } = useFirebase();
 
-    const loadArticleData = async () => {
-        if (!aid) {
-            throw new Error('文章 ID 无效');
-        }
+    const loadArticleData = async (aid: string) => {
         const result = await RPC_call('GET_ARTICLE', { aid: aid });
-        let article = await result.json() as ArticleDAO;
-        console.log('Article: 文章数据加载成功', article);
-        setArticle(article);
+        const article = await result.json() as ArticleDAO;
         const userInfo = await getUserFirebase(article.uid);
-        setAuthor(userInfo as UserInfo);
+        return { article, userInfo: userInfo as UserInfo };
     };
+
+    const { start: startLoadArticle, loading, result: articleData } = useLoading({
+        asyncfn: loadArticleData,
+        label: 'Loading article data...'
+    });
 
     // 第一个 useEffect: 加载文章内容和用户信息
     useEffect(() => {
         if (!aid || !isUUID(aid)) {
-            setError('Article: 文章 ID 无效');
-            return;
+            throw new ErrorThenNavigate(-1, 'ArticlePage: 文章 ID 无效', aid)
         }
-        LOG_append('Article: 开始加载文章数据' + aid);
-        try {
-            loadArticleData();
-        } catch (error) {
-            setError('Article: 加载文章数据失败' + error);
-        } finally {
-            LOG_clear();
-        }
+        startLoadArticle(aid);
     }, [aid]);
 
     // 第二个 useEffect: 监控加载状态，当文章数据和编辑器都准备好时渲染内容
     useEffect(() => {
-        if (editor && article) {
-            try {
-                LOG_append('Article: 开始渲染编辑器内容');
-                if (!editor || !article) return
-                editor.commands.setContent(JSON.parse(article.content));
-            } catch (error) {
-                setError('Article: 加载编辑器内容失败' + error);
-            } finally {
-                LOG_clear();
-            }
+        if (editor && articleData) {
+            if (!editor || !articleData.article) return
+            editor.commands.setContent(JSON.parse(articleData.article.content));
         }
-    }, [article, editor]);
+    }, [articleData, editor]);
 
-    if (!article || !author) {
-        return null;
+    if (loading) {
+        return <LoadingPage label="Loading article data..." />
     }
 
     return (
-        <ArticleContext.Provider value={{ article, author }}>
+        <ArticleContext.Provider value={{ article: articleData?.article, author: articleData?.userInfo }}>
             <div className="h-full flex flex-col">
                 <div className="flex-1 flex gap-4 overflow-hidden justify-center">
                     <div className="lg:w-5/8 max-lg:w-full overflow-auto dark:bg-blue-800 bg-blue-100 border border-secondary rounded-lg">
@@ -114,13 +98,13 @@ export default function Article() {
 function ArticleArweaveInfo({ article }: { article: ArticleDAO }) {
     if (!article) return null;
     if (article.chain === '{}') return null;
-    
+
     const { searchTx } = useArweave();
     const [arweaveInfo, setArweaveInfo] = useState<Transaction | null>(null);
 
     useEffect(() => {
         const loadArweaveInfo = async () => {
-            
+
             const chainInfo = JSON.parse(article.chain) as Record<string, string>;
             const res = await searchTx(chainInfo.tx_id);
             console.log('Article: ArticleArweaveInfo', res);
@@ -132,7 +116,7 @@ function ArticleArweaveInfo({ article }: { article: ArticleDAO }) {
     return (
         <div className="text-xs">
             <p >Arweave Transaction Info</p>
-            <div>   
+            <div>
                 <p className="text-sm w-full rounded break-words whitespace-pre-wrap">Tx ID: {arweaveInfo?.id}</p>
                 <div>
                     {arweaveInfo?.tags.map((tag) => (

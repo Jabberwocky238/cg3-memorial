@@ -16,7 +16,7 @@ import {
     setFirebasePublic,
     getFirebaseSecret,
 } from './use-firebase-inner';
-import { LoadingPage } from './use-theme';
+import { LoadingPage } from './use-loading';
 import { useNavigate } from 'react-router-dom';
 
 export const DEFAULT_AVATAR = "https://cdn4.iconfinder.com/data/icons/glyphs/24/icons_user-1024.png"

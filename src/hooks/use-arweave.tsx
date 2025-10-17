@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useFirebase } from './use-firebase';
-import { useAppState } from './use-app-state';
 
 import Arweave from 'arweave/web';
 import Transaction from 'arweave/web/lib/transaction';
 import type { JWKInterface } from 'arweave/web/lib/wallet';
+import { EasyError } from './use-error';
+import { LoadingPage, useLoading } from './use-loading';
 
 export interface UserArweaveSecret {
     privateKey?: JWKInterface
@@ -15,9 +16,6 @@ export interface UserArweavePublic {
 }
 
 interface ArweaveContextType {
-    initing: boolean
-    loading: boolean
-    error: string | null
     arweave: Arweave
     privateThings: UserArweaveSecret | null
     publicThings: UserArweavePublic | null
@@ -33,10 +31,6 @@ const ArweaveContext = createContext<ArweaveContextType | null>(null)
 
 export function ArweaveProvider({ children }: { children: React.ReactNode }) {
     const arweaveRef = useRef<Arweave | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [initing, setIniting] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-
     const [innerSecret, setInnerSecret] = useState<UserArweaveSecret | null>(null)
     const [innerPublic, setInnerPublic] = useState<UserArweavePublic | null>(null)
 
@@ -46,75 +40,69 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
         getFirebasePublic, setFirebasePublic
     } = useFirebase()
 
-    useEffect(() => {
-        setLoading(true)
-        try {
+    const { start: startInitArweave, loading: loadingInitArweave } = useLoading({
+        asyncfn: async () => {
             arweaveRef.current = Arweave.init({
                 host: 'arweave.net',
                 port: 443,
                 protocol: 'https'
             })
-        } catch (error) {
-            setError('初始化 Arweave 失败: ' + error)
-        } finally {
-            setLoading(false)
-        }
+        },
+        label: '加载 Arweave 私钥...'
+    })
+
+    useEffect(() => {
+        startInitArweave()
     }, [])
 
     const tryLoadPrivateKey = async () => {
         if (!arweaveRef.current) throw new Error('Arweave 未初始化')
-        if (user) {
-            console.log(user)
-            const secret = await getFirebaseSecret(user.uid)
-            let key: JWKInterface | null = null
+        console.log('Arweave: Trying to load Arweave private key...')
+        try {
+            if (user) {
+                console.log(user)
+                const secret = await getFirebaseSecret(user.uid)
+                let key: JWKInterface | null = null
 
-            if (secret) {
-                if (Object.keys(secret).find(key => key === ARWEAVE_JWK)) {
-                    key = _parseArweaveKey(secret[ARWEAVE_JWK] as Record<string, unknown>)
+                if (secret) {
+                    if (Object.keys(secret).find(key => key === ARWEAVE_JWK)) {
+                        key = _parseArweaveKey(secret[ARWEAVE_JWK] as Record<string, unknown>)
+                    }
                 }
-            }
-            // key posibly is still null
-            if (!key) {
-                // 如果没有私钥 / 不合法，则创建一个
-                console.log('Arweave hook: 创建新私钥...')
-                key = await arweaveRef.current.wallets.generate()
-                await setFirebaseSecret(user.uid, { [ARWEAVE_JWK]: key })
-                console.log('Arweave 私钥创建成功')
-            } else {
-                console.log('Arweave 私钥加载成功', key)
-            }
+                // key posibly is still null
+                if (!key) {
+                    // 如果没有私钥 / 不合法，则创建一个
+                    console.log('Arweave hook: 创建新私钥...')
+                    key = await arweaveRef.current.wallets.generate()
+                    await setFirebaseSecret(user.uid, { [ARWEAVE_JWK]: key })
+                    console.log('Arweave 私钥创建成功')
+                } else {
+                    console.log('Arweave 私钥加载成功', key)
+                }
 
-            const address = await arweaveRef.current.wallets.jwkToAddress(key)
-            setInnerSecret({ privateKey: key })
-            setInnerPublic({ arweaveAddress: address })
-            setFirebasePublic(user.uid, { arweaveAddress: address })
-        } else {
-            console.log('Arweave hook: 用户未登录，清空状态')
-            setInnerSecret(null)
-            setInnerPublic(null)
+                const address = await arweaveRef.current.wallets.jwkToAddress(key)
+                setInnerSecret({ privateKey: key })
+                setInnerPublic({ arweaveAddress: address })
+                setFirebasePublic(user.uid, { arweaveAddress: address })
+            } else {
+                console.log('Arweave hook: 用户未登录，清空状态')
+                setInnerSecret(null)
+                setInnerPublic(null)
+            }
+        } catch (error) {
+            throw new EasyError('Arweave: 加载 Arweave 私钥失败: ', error)
         }
     }
 
+    const { start: startLoadPrivateKey, loading: loadingLoadPrivateKey } = useLoading({
+        asyncfn: tryLoadPrivateKey,
+        label: '尝试加载 Arweave 私钥...'
+    })
+
     useEffect(() => {
-        if (fbloading) {
-            console.log('Arweave hook: fbloading')
-            return
-        }
-        if (!arweaveRef.current) {
-            console.log('Arweave hook: arweaveRef 未初始化')
-            return
-        }
-        setLoading(true)
-        console.log('Arweave hook: 加载 Arweave 私钥...')
-        try {
-            tryLoadPrivateKey()
-        } catch (error) {
-            console.error('Arweave hook: 加载 Arweave 私钥失败: ' + error)
-            setError('加载 Arweave 私钥失败: ' + error)
-        } finally {
-            setLoading(false)
-        }
-        setIniting(false)
+        if (fbloading) return
+        if (!arweaveRef.current) return
+        startLoadPrivateKey()
     }, [fbloading, arweaveRef.current, auth])
 
     const createTx = useCallback((content: string, headers: [string, string][]) => {
@@ -135,11 +123,19 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
     const searchByQueryRaw = useCallback((tags: Record<string, string>, arweaveAddress?: string) => {
         if (!arweaveRef.current) throw new Error('Arweave 未初始化')
         return _searchByQueryRaw(arweaveRef.current, tags, arweaveAddress)
-    }, [arweaveRef.current])    
+    }, [arweaveRef.current])
+
+    if (loadingInitArweave) {
+        return <LoadingPage label="Initializing Arweave..." />
+    }
+    
+    if (loadingLoadPrivateKey) {
+        return <LoadingPage label="Loading Arweave private key..." />
+    }
 
     return (
         <ArweaveContext.Provider value={{
-            initing, loading, error, arweave: arweaveRef.current!,
+            arweave: arweaveRef.current!,
             createTx, searchTx, searchByQuery, searchByQueryRaw,
             privateThings: innerSecret,
             publicThings: innerPublic,
@@ -267,13 +263,13 @@ const _searchTx = async (arweave: Arweave, tx_id: string) => {
     const res = await arweave.transactions.get(tx_id)
     // 获取明文数据
     const data = await arweave.transactions.getData(tx_id, { decode: true, string: true })
-    
+
     // 解码 tags 为明文
     const decodedTags = res.tags.map(tag => ({
         name: arweave.utils.b64UrlToString(tag.name),
         value: arweave.utils.b64UrlToString(tag.value)
     }))
-    
+
     return {
         ...res,
         data: data,

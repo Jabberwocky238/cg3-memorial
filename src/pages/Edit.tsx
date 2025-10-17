@@ -14,10 +14,9 @@ import { Editor } from '@tiptap/react'
 import { Toolbar } from '@/components/tiptap-ui-primitive/toolbar/toolbar'
 import { MainToolbarContent } from '@/components/tiptap-templates/simple/simple-editor'
 import { MobileToolbarContent } from '@/components/tiptap-templates/simple/simple-editor'
-import { GeneralPortal, MobilePortal, ModalButton } from '@/components/application/app-navigation/base-components/mobile-header';
+import { MobilePortal, ModalButton } from '@/components/application/app-navigation/base-components/mobile-header';
 import { CloseIcon } from '@/components/tiptap-icons/close-icon'
 import { Button } from '@/components/base/buttons/button'
-import { isUUID, useAppState } from '@/hooks/use-app-state'
 import { Tag, TagGroup, type TagItem, TagList } from "@/components/base/tags/tags";
 import { Input } from "@/components/base/input/input";
 import { Select, type SelectItemType } from "@/components/base/select/select";
@@ -27,6 +26,9 @@ import { ArticleClass, type TagTreeType } from '@/lib/article-class'
 import { createContext } from 'react'
 import { RPC_call, type ArticleDAO } from '@/lib/api/base'
 import { Toggle } from '@/components/base/toggle/toggle'
+import { ErrorBoundary, ErrorThenNavigate } from '@/hooks/use-error'
+import { useLoading } from '@/hooks/use-loading'
+import { isUUID } from '@/utils/cg-utils'
 
 const EditContext = createContext<{
   articleRef: RefObject<ArticleClass>
@@ -37,7 +39,9 @@ export default function EditPageWrapper() {
   const articleRef = useRef<ArticleClass>(new ArticleClass())
   return (
     <EditContext.Provider value={{ articleRef }}>
-      <EditPage />
+      <ErrorBoundary>
+        <EditPage />
+      </ErrorBoundary>
     </EditContext.Provider>
   )
 }
@@ -55,7 +59,6 @@ function EditPage() {
   const { userFirebase } = useFirebase()
   const { editor } = useEditorLifetime(true)
   const { articleRef } = useEditContext()
-  const { LOG_append, LOG_clear, setError } = useAppState()
 
   const tryLoadArticle = async (aid: string) => {
     console.log('Edit: 开始加载文章', aid)
@@ -64,8 +67,15 @@ function EditPage() {
     articleRef.current.lock()
     articleRef.current = ArticleClass.fromDAO(article as ArticleDAO)
     articleRef.current.unlock()
-    return { isBelongToUser: article.uid === userFirebase?.uid }
+    if (article.uid !== userFirebase?.uid) {
+      throw new ErrorThenNavigate('/article/' + aid, 'EditPage: 文章不属于您，您只能查看，不能编辑。', aid)
+    }
   }
+
+  const { start: startLoadArticle, loading } = useLoading({
+    asyncfn: tryLoadArticle,
+    label: 'Loading article...'
+  })
 
   useEffect(() => {
     if (!editor) return
@@ -86,22 +96,10 @@ function EditPage() {
       return
     }
     if (!isUUID(aid)) {
-      setError('Edit: 文章 ID 无效' + aid)
-      return
+      throw new ErrorThenNavigate(-1, 'EditPage: 文章 ID 无效', aid)
     }
     console.log('Edit: 检查文章是否属于用户', aid)
-    LOG_append('Edit: 检查文章是否属于用户' + aid)
-    tryLoadArticle(aid).then(isBelongToUser => {
-      if (!isBelongToUser) {
-        setError('Edit: 文章不属于您，您只能查看，不能编辑。' + aid)
-        return
-      }
-      LOG_clear()
-    }).catch((error) => {
-      console.error('Edit: 检查文章是否属于用户失败', error)
-      setError('Edit: 加载失败' + error)
-      return
-    })
+    startLoadArticle(aid)
   }, [aid])
 
   return (
@@ -468,7 +466,7 @@ function TagsPanel({ close, getTags, setTags }: TagsPanelProps) {
 }
 
 
-export function ArticleMetaEditPanel({ editor, close }: { editor: Editor | null, close: () => void }) {
+function ArticleMetaEditPanel({ editor, close }: { editor: Editor | null, close: () => void }) {
   const [started, setStarted] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const { userFirebase } = useFirebase()
@@ -507,7 +505,7 @@ export function ArticleMetaEditPanel({ editor, close }: { editor: Editor | null,
           msg_type: 'article_update',
         })
         console.log('Report upchain tx success', result1)
-      }     
+      }
       let articleData = {
         title: article.title,
         tags: JSON.stringify(article.tags),

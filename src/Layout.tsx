@@ -3,7 +3,6 @@ import { useMemo, memo } from 'react'
 import { useFirebase } from '@/hooks/use-firebase'
 import { Bell01, PlusSquare, Settings01 } from '@untitledui/icons'
 import { ArweaveProvider } from './hooks/use-arweave'
-import { AppStateProvider } from './hooks/use-app-state'
 import { useTheme } from './hooks/use-theme'
 import { MobileNavigationHeader } from './components/application/app-navigation/base-components/mobile-header'
 import { NavList } from './components/application/app-navigation/base-components/nav-list'
@@ -22,6 +21,7 @@ import { Popover } from 'react-aria-components'
 import { NavItemButton } from './components/application/app-navigation/base-components/nav-item-button'
 import { Button as AriaButton } from 'react-aria-components'
 import { CashierProvider } from './hooks/use-cashier'
+import { ErrorBoundary } from './hooks/use-error'
 
 const navItems = [
 	// { label: 'Home', href: '/' },
@@ -57,13 +57,13 @@ const Layout = memo(() => {
 			backgroundColor: 'var(--background-color-primary)',
 		}}>
 			<HeaderNavigation />
-			<AppStateProvider>
+			<ErrorBoundary>
 				<ArweaveProvider>
 					<CashierProvider>
 						<Outlet />
 					</CashierProvider>
 				</ArweaveProvider>
-			</AppStateProvider>
+			</ErrorBoundary>
 		</div>
 	)
 });

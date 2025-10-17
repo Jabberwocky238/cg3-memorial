@@ -9,12 +9,9 @@ import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group'
 import { useNavigate } from 'react-router-dom'
 import { useArweave, type SearchByQueryResponse, type UserArweavePublic } from '@/hooks/use-arweave'
 import { useCashier, type UserCashier } from '@/hooks/use-cashier'
-import { LoadingIndicator } from '@/components/application/loading-indicator/loading-indicator'
 import { copyToClipboard } from '@/utils/cg-utils'
-import { LoadingErrorHelper } from '@/hooks/use-app-state'
 import { Divider } from '@/components/tremor/Divider'
 import type { User } from 'firebase/auth'
-import type Transaction from 'arweave/web/lib/transaction'
 import { HelpCircle } from "@untitledui/icons";
 import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 
@@ -153,7 +150,7 @@ export default function Profile() {
 
 function ArweaveInfoSection() {
     const {
-        loading, error, arweave,
+        arweave,
         publicThings, privateThings,
         searchByQueryRaw
     } = useArweave()
@@ -161,7 +158,6 @@ function ArweaveInfoSection() {
     const [transactions, setTransactions] = useState<SearchByQueryResponse['transactions']['edges']>([])
 
     useEffect(() => {
-        if (loading || error) return
         if (!arweave) return
         if (publicThings?.arweaveAddress) {
             arweave.wallets.getBalance(publicThings.arweaveAddress).then(setBalance)
@@ -169,54 +165,52 @@ function ArweaveInfoSection() {
                 setTransactions(txs.transactions.edges)
             }).catch(console.error)
         }
-    }, [loading, error, arweave, publicThings?.arweaveAddress])
+    }, [arweave, publicThings?.arweaveAddress])
 
     return (
-        <LoadingErrorHelper loading={loading} error={error}>
-            <div className="w-full">
-                <div className="space-y-3">
-                    <div>
-                        <Label className="text-sm font-medium ">钱包地址</Label>
-                        <div className="mt-1 flex items-center space-x-2">
-                            <Input
-                                value={publicThings?.arweaveAddress ?? ''}
-                                isReadOnly
-                                className="font-mono text-sm"
-                            />
-                            <Button
-                                size="lg"
-                                onClick={() => copyToClipboard(publicThings?.arweaveAddress ?? '', 'address')}
-                            >
-                                <Copy01 className="h-4 w-4" />
-                            </Button>
-                        </div>
+        <div className="w-full">
+            <div className="space-y-3">
+                <div>
+                    <Label className="text-sm font-medium ">钱包地址</Label>
+                    <div className="mt-1 flex items-center space-x-2">
+                        <Input
+                            value={publicThings?.arweaveAddress ?? ''}
+                            isReadOnly
+                            className="font-mono text-sm"
+                        />
+                        <Button
+                            size="lg"
+                            onClick={() => copyToClipboard(publicThings?.arweaveAddress ?? '', 'address')}
+                        >
+                            <Copy01 className="h-4 w-4" />
+                        </Button>
                     </div>
-                    <div>
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                            钱包余额
-                            <Tooltip title="钱包余额是用户在Arweave网络中的余额，用于支付交易费用。此数字不是USD，大于零即可正常使用。" placement="top">
-                                <TooltipTrigger>
-                                    <HelpCircle className="size-4" />
-                                </TooltipTrigger>
-                            </Tooltip>
-                        </Label>
-                        <div className="mt-1 flex items-center space-x-2">
-                            <Input value={balance} isReadOnly className="font-mono text-sm" />
-                        </div>
+                </div>
+                <div>
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                        钱包余额
+                        <Tooltip title="钱包余额是用户在Arweave网络中的余额，用于支付交易费用。此数字不是USD，大于零即可正常使用。" placement="top">
+                            <TooltipTrigger>
+                                <HelpCircle className="size-4" />
+                            </TooltipTrigger>
+                        </Tooltip>
+                    </Label>
+                    <div className="mt-1 flex items-center space-x-2">
+                        <Input value={balance} isReadOnly className="font-mono text-sm" />
                     </div>
-                    <div>
-                        <Label className="text-sm font-medium ">所有Transactions</Label>
-                        <div className="mt-1 ">
-                            {transactions.map(tx => (
-                                <div key={tx.node.id}>
-                                    <p className='text-xs'>{tx.node.id} - {tx.node.owner.address} - {tx.node.data.size} - {tx.node.block.height} - {tx.node.block.timestamp}</p>
-                                </div>
-                            ))}
-                        </div>
+                </div>
+                <div>
+                    <Label className="text-sm font-medium ">所有Transactions</Label>
+                    <div className="mt-1 ">
+                        {transactions.map(tx => (
+                            <div key={tx.node.id}>
+                                <p className='text-xs'>{tx.node.id} - {tx.node.owner.address} - {tx.node.data.size} - {tx.node.block.height} - {tx.node.block.timestamp}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
-        </LoadingErrorHelper>
+        </div>
     )
 }
 
@@ -227,7 +221,7 @@ interface DebugSectionProps {
 }
 
 function DebugSection({ user, cashier }: DebugSectionProps) {
-    const { publicThings, privateThings, loading } = useArweave()
+    const { publicThings, privateThings } = useArweave()
     return (
         <>
             <div className="space-y-4">

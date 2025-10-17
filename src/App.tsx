@@ -3,7 +3,7 @@ import { Route, Routes, BrowserRouter, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './hooks/use-theme'
 import { lazy } from 'react'
 import FirebaseProvider from './hooks/use-firebase'
-import { GlobalPortalProvider } from './hooks/use-app-state'
+import { ErrorBoundary } from './hooks/use-error'
 
 const Layout = lazy(() => import('./Layout'))
 const HomePage = lazy(() => import('./pages/Home'))
@@ -41,14 +41,13 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <ThemeProvider>
-        <FirebaseProvider>
-          {/* <AppRoutes /> */}
-          <GlobalPortalProvider>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <FirebaseProvider>
             <AppRoutes />
-          </GlobalPortalProvider>
-        </FirebaseProvider>
-      </ThemeProvider>
+          </FirebaseProvider>
+        </ThemeProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }

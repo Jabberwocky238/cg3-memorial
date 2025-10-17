@@ -1,24 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
-import { RPC_call, RPC_CALLS, type ArticleDAO, type ArTxRecordDAO } from '@/lib/api/base';
+import { useEffect } from 'react';
+import { RPC_call, type ArticleDAO } from '@/lib/api/base';
 import { useFirebase } from '@/hooks/use-firebase';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useAppState } from '@/hooks/use-app-state';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { UserInfo } from 'firebase/auth';
 import { TabNavigation, TabNavigationLink } from "@/components/tremor/TabNavigation"
 import { formatDate } from '@/utils/cg-utils';
+import { uniqBy } from 'lodash-es';
+import { LoadingPage, useLoading } from '@/hooks/use-loading';
 
 type ArticleWithUser = ArticleDAO & { userInfo?: UserInfo }
 
 export default function Explore() {
   const { getUserFirebase } = useFirebase();
-  const { LOG_append, LOG_clear, setError } = useAppState();
-  const [articles, setArticles] = useState<ArticleWithUser[]>([]);
   const navigate = useNavigate();
-  const params = useParams(); // 路径参数
   const [searchParams] = useSearchParams(); // 查询参数
   const topic = searchParams.get('topic'); // 获取 topic 查询参数
-
-  console.log('Explore: topic', topic);
 
   const loadArticles = async () => {
     const result = await RPC_call('RANK_TOPICS_TOPK', { topic: topic ? topic : '', top_k: '10' });
@@ -26,7 +22,7 @@ export default function Explore() {
       const data = await result.json() as ArticleDAO[];
       // 为每篇文章获取用户信息
       const articlesWithUser = await Promise.all(
-        data.map(async (article: ArticleDAO) => {
+        uniqBy(data, 'aid').map(async (article: ArticleDAO) => {
           try {
             const userInfo = await getUserFirebase(article.uid);
             return {
@@ -39,19 +35,19 @@ export default function Explore() {
           }
         })
       );
-      setArticles(articlesWithUser);
+      return articlesWithUser;
+    } else {
+      throw new EasyError('获取文章失败');
     }
   };
 
+  const { start: startLoadArticles, loading, result: articles } = useLoading({
+    asyncfn: loadArticles,
+    label: 'Loading articles...'
+  });
+
   useEffect(() => {
-    LOG_append('Explore: 开始加载文章');
-    try {
-      loadArticles();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败');
-    } finally {
-      LOG_clear();
-    }
+    startLoadArticles();
   }, []);
 
   return (
@@ -65,34 +61,45 @@ export default function Explore() {
             <TabNavigationLink href="/explore?topic=technology">Technology</TabNavigationLink>
             <TabNavigationLink href="/explore?topic=warfare">Warfare</TabNavigationLink>
           </TabNavigation>
-          <CarouselMd className='mb-4' articles={articles.slice(0, 5)} />
-          {articles.map((article) => (
-            <ArticleItem key={article.aid} article={article} onClick={() => {
-              navigate(`/article/${article.aid}`);
-            }} />
-          ))}
+
+          {loading ? (
+            <LoadingPage label="Loading articles..." />
+          ) : (
+            <>
+              <CarouselMd className='mb-4' articles={articles.slice(0, 5)} />
+              {articles.map((article) => (
+                <ArticleItem key={article.aid} article={article} onClick={() => {
+                  navigate(`/article/${article.aid}`);
+                }} />
+              ))}
+            </>
+          )}
         </div>
 
-        {/* 右侧文章列表 - 移动端全宽，桌面端占1/3 */}
+        {/* 右侧排行榜 - 移动端全宽，桌面端占1/3 */}
         <div className="w-full lg:w-1/3 h-full overflow-y-auto space-y-6">
           <h4 className='text-lg font-bold'>Recent Articles</h4>
-          <div className='space-y-2'>
-            {articles.map((article, index) => (
-              <div key={article.aid} className='flex items-center gap-2 hover:text-primary bg-primary_hover rounded-md p-2'>
-                <span>{index + 1}.</span>
-                <Link to={`/article/${article.aid}`}>{article.title}</Link>
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <LoadingPage label="Loading Rankings..." />
+          ) : (
+            <div className='space-y-2'>
+              {articles.map((article, index) => (
+                <div key={article.aid} className='flex items-center gap-2 hover:text-primary bg-primary_hover rounded-md p-2'>
+                  <span>{index + 1}.</span>
+                  <Link to={`/article/${article.aid}`}>{article.title}</Link>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-
 import { ChevronLeft, ChevronRight } from "@untitledui/icons";
 import { Carousel } from "@/components/application/carousel/carousel-base";
+import { EasyError } from '@/hooks/use-error';
 
 const PLACEHOLDER_IMAGES = [
   'https://www.untitledui.com/application/plants.webp',

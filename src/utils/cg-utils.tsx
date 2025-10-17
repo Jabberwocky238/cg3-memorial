@@ -1,4 +1,3 @@
-import { LoadingIndicator } from "@/components/application/loading-indicator/loading-indicator"
 
 export const copyToClipboard = async (text: string, type: string) => {
     try {
@@ -19,4 +18,9 @@ export const formatDate = (dateString: string) => {
         minute: '2-digit',
     });
 };
+
+
+export function isUUID(str: string) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+}
 
