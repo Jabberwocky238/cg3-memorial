@@ -16,7 +16,7 @@ import {
     setFirebasePublic,
     getFirebaseSecret,
 } from './use-firebase-inner';
-import { LoadingPage } from './use-loading';
+import { LoadingPage, useLoading } from './use-loading';
 import { useNavigate } from 'react-router-dom';
 
 export const DEFAULT_AVATAR = "https://cdn4.iconfinder.com/data/icons/glyphs/24/icons_user-1024.png"
@@ -32,8 +32,6 @@ const firebaseConfig = {
 };
 
 interface UserContextType {
-    loading: boolean
-
     auth: Auth | null
     userFirebase: User | null
 
@@ -65,12 +63,13 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
     const googleProvider = new GoogleAuthProvider();
     const navigate = useNavigate()
 
-    const [loading, setLoading] = useState(true)
-    const [initing, setIniting] = useState(true)
-
     useEffect(() => {
         // Initialize Firebase
-        if (appRef.current) return
+        console.log('Firebase: Initializing Firebase app...')
+        if (appRef.current) {
+            console.log('Firebase: Firebase app already initialized')
+            return
+        }
         appRef.current = initializeApp(firebaseConfig);
         dbRef.current = getFirestore(appRef.current);
         authRef.current = getAuth(appRef.current);
@@ -125,35 +124,38 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
 
     // 用于退出登陆后的用户信息更新
     const [userFirebaseReactive, setUserFirebaseReactive] = useState<User | null>(null)
+    const { start, loading, result: unsubscribe } = useLoading({
+        asyncfn: async () => {
+            if (!authRef.current || !dbRef.current) return
+            console.log('Firebase: Listening to user state changes...')
+            const unsubscribe = onAuthStateChanged(authRef.current, async (u: User | null) => {
+                if (u) {
+                    if (u.emailVerified !== true) {
+                        await navigate('/auth#login')
+                        return
+                    }
+                    await _setUserFirebase(u.uid, {})
+                    setUserFirebaseReactive(u)
+                } else {
+                    setUserFirebaseReactive(null)
+                }
+            })
+            return unsubscribe
+        },
+        label: '监听用户状态变化...'
+    })
     useEffect(() => {
         if (!authRef.current || !dbRef.current) return
-        setIniting(false)
-        const unsubscribe = onAuthStateChanged(authRef.current, async (u: User | null) => {
-            setLoading(true)
-            if (u) {
-                if (u.emailVerified !== true) {
-                    setLoading(false)
-                    await navigate('/auth#login')
-                    return
-                }
-                await _setUserFirebase(u.uid, {})
-                setUserFirebaseReactive(u)
-            } else {
-                setUserFirebaseReactive(null)
-            }
-            setLoading(false)
-        })
+        start()
         return unsubscribe
     }, [authRef.current, dbRef.current])
 
-    if (initing) {
+    if (loading) {
         return <LoadingPage label="APP Initializing..." />
     }
 
     return (
         <FirebaseContext.Provider value={{
-            loading,
-
             auth: authRef.current,
             userFirebase: userFirebaseReactive,
             setUserFirebase: _setUserFirebase,

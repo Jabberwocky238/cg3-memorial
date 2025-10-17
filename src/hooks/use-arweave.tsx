@@ -35,7 +35,7 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
     const [innerPublic, setInnerPublic] = useState<UserArweavePublic | null>(null)
 
     const {
-        userFirebase: user, auth, loading: fbloading,
+        userFirebase: user, auth,
         getFirebaseSecret, setFirebaseSecret,
         getFirebasePublic, setFirebasePublic
     } = useFirebase()
@@ -72,12 +72,12 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
                 // key posibly is still null
                 if (!key) {
                     // 如果没有私钥 / 不合法，则创建一个
-                    console.log('Arweave hook: 创建新私钥...')
+                    console.log('Arweave: 创建新私钥...')
                     key = await arweaveRef.current.wallets.generate()
                     await setFirebaseSecret(user.uid, { [ARWEAVE_JWK]: key })
-                    console.log('Arweave 私钥创建成功')
+                    console.log('Arweave: 私钥创建成功', key)
                 } else {
-                    console.log('Arweave 私钥加载成功', key)
+                    console.log('Arweave: 私钥加载成功', key)
                 }
 
                 const address = await arweaveRef.current.wallets.jwkToAddress(key)
@@ -85,7 +85,7 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
                 setInnerPublic({ arweaveAddress: address })
                 setFirebasePublic(user.uid, { arweaveAddress: address })
             } else {
-                console.log('Arweave hook: 用户未登录，清空状态')
+                console.log('Arweave: 用户未登录，清空状态')
                 setInnerSecret(null)
                 setInnerPublic(null)
             }
@@ -100,10 +100,9 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
     })
 
     useEffect(() => {
-        if (fbloading) return
         if (!arweaveRef.current) return
         startLoadPrivateKey()
-    }, [fbloading, arweaveRef.current, auth])
+    }, [arweaveRef.current, auth])
 
     const createTx = useCallback((content: string, headers: [string, string][]) => {
         if (!arweaveRef.current || !innerSecret?.privateKey) throw new Error('Arweave 未初始化或私钥未加载')
@@ -128,7 +127,7 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
     if (loadingInitArweave) {
         return <LoadingPage label="Initializing Arweave..." />
     }
-    
+
     if (loadingLoadPrivateKey) {
         return <LoadingPage label="Loading Arweave private key..." />
     }

@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { useFirebase } from "./use-firebase"
 import type { User } from "firebase/auth"
+import { useLoading } from "./use-loading"
+import { EasyError } from "./use-error"
 
 
 // const CASHIER_URL = "http://localhost:8787"
@@ -49,9 +51,6 @@ export interface UserCashierSecret {
 }
 
 interface CashierContextType {
-    loading: boolean
-    initing: boolean
-    error: string | null
     userCashier: UserCashier | null
     transfer: (amount: number, toUid: string) => Promise<void>
 }
@@ -67,49 +66,38 @@ export const ErrorCashier = {
 }
 
 export function CashierProvider({ children }: { children: React.ReactNode }) {
-    const [loading, setLoading] = useState(true)
-    const [initing, setIniting] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-    const { userFirebase, loading: fbloading, auth } = useFirebase()
+    const { userFirebase, auth } = useFirebase()
 
     const [innerSecret, setInnerSecret] = useState<UserCashierSecret | null>(null)
 
     const tryLoadUserCashier = async (user: User) => {
-        setLoading(true)
-        const idToken = await user.getIdToken(true)
-        const userCashier = await loadThisUserAccount(idToken)
-        setInnerSecret({ userCashier })
-        setLoading(false)
-        return userCashier
+        try {
+            const idToken = await user.getIdToken(true)
+            const userCashier = await loadThisUserAccount(idToken)
+            setInnerSecret({ userCashier })
+            console.log('Cashier: 用户账户加载成功', userCashier)
+            return userCashier
+        } catch (error) {
+            throw new EasyError('Cashier: 尝试加载用户账户失败: ', error)
+        }
     }
 
+    const { start: startTryLoadUserCashier, loading: loadingTryLoadUserCashier } = useLoading({
+        asyncfn: tryLoadUserCashier,
+        label: '尝试加载用户账户...'
+    })
+
     useEffect(() => {
-        if (fbloading) {
-            console.log('Cashier hook: fbloading')
-            return
-        }
         if (!auth || !userFirebase) {
-            console.log('Cashier hook: auth is null')
+            console.log('Cashier: auth is null')
             return
         }
-        try {
-            tryLoadUserCashier(userFirebase).then(userCashier => {
-                console.log('Cashier hook: userCashier', userCashier)
-            })
-        } catch (error) {
-            console.error('Cashier hook: tryLoadUserCashier failed: ' + error)
-            setError('Cashier hook: tryLoadUserCashier failed: ' + error)
-        } finally {
-            setIniting(false)
-        }
-    }, [fbloading, auth])
+        startTryLoadUserCashier(userFirebase)
+    }, [auth])
 
 
     return (
         <CashierContext.Provider value={{
-            loading,
-            initing,
-            error,
             userCashier: innerSecret?.userCashier ?? null,
             transfer: async (amount: number, toUid: string) => {
                 if (!innerSecret?.userCashier || !userFirebase) {

@@ -90,14 +90,13 @@ function AnchorNavigation() {
 }
 
 export default function Profile() {
-    const { userFirebase, loading: firebaseLoading } = useFirebase()
-    const { userCashier, loading: cashierLoading } = useCashier()
+    const { userFirebase } = useFirebase()
+    const { userCashier } = useCashier()
     const navigate = useNavigate()
 
     useEffect(() => {
-        if (firebaseLoading) return
         if (!userFirebase) navigate('/auth')
-    }, [userFirebase, userCashier, firebaseLoading, navigate])
+    }, [userFirebase, userCashier, navigate])
 
     if (!userFirebase) return null
 
