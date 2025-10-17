@@ -4,6 +4,8 @@ import { ThemeProvider } from './hooks/use-theme'
 import { lazy } from 'react'
 import FirebaseProvider from './hooks/use-firebase'
 import { ErrorBoundary } from './hooks/use-error'
+import { ArweaveProvider } from './hooks/use-arweave'
+import { CashierProvider } from './hooks/use-cashier'
 
 const Layout = lazy(() => import('./Layout'))
 const HomePage = lazy(() => import('./pages/Home'))
@@ -44,7 +46,11 @@ function App() {
       <ErrorBoundary>
         <ThemeProvider>
           <FirebaseProvider>
-            <AppRoutes />
+            <ArweaveProvider>
+              <CashierProvider>
+                <AppRoutes />
+              </CashierProvider>
+            </ArweaveProvider>
           </FirebaseProvider>
         </ThemeProvider>
       </ErrorBoundary>

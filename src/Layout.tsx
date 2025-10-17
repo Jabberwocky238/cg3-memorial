@@ -58,11 +58,7 @@ const Layout = memo(() => {
 		}}>
 			<HeaderNavigation />
 			<ErrorBoundary>
-				<ArweaveProvider>
-					<CashierProvider>
-						<Outlet />
-					</CashierProvider>
-				</ArweaveProvider>
+				<Outlet />
 			</ErrorBoundary>
 		</div>
 	)

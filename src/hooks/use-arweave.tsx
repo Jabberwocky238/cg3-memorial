@@ -16,7 +16,7 @@ export interface UserArweavePublic {
 }
 
 interface ArweaveContextType {
-    arweave: Arweave
+    arweave: Arweave | null
     privateThings: UserArweaveSecret | null
     publicThings: UserArweavePublic | null
 
@@ -134,7 +134,7 @@ export function ArweaveProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <ArweaveContext.Provider value={{
-            arweave: arweaveRef.current!,
+            arweave: arweaveRef.current,
             createTx, searchTx, searchByQuery, searchByQueryRaw,
             privateThings: innerSecret,
             publicThings: innerPublic,

@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore/lite';
-import { OAuthCredential, updateProfile, onAuthStateChanged, type Auth, type User, sendEmailVerification, browserLocalPersistence, setPersistence, type UserInfo } from "firebase/auth"
+import { OAuthCredential, updateProfile, onAuthStateChanged, type Auth, type User, sendEmailVerification, browserLocalPersistence, setPersistence, type UserInfo, type UserCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth"
 import { createContext, useContext, useEffect, useRef, useState } from "react"
 import {
     getAuth,
@@ -8,7 +8,6 @@ import {
     GoogleAuthProvider,
 } from 'firebase/auth';
 import {
-    emailSignIn, emailSignUp, googleSignIn,
     getFirebaseUser,
     setFirebaseUser,
     setFirebaseSecret,
@@ -18,6 +17,7 @@ import {
 } from './use-firebase-inner';
 import { LoadingPage } from './use-loading';
 import { useNavigate } from 'react-router-dom';
+import { EasyError } from './use-error';
 
 export const DEFAULT_AVATAR = "https://cdn4.iconfinder.com/data/icons/glyphs/24/icons_user-1024.png"
 
@@ -79,7 +79,15 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
 
 
     const _emailSignUp = async (email: string, password: string) => {
-        return await emailSignUp(authRef.current!, email, password)
+        if (!authRef.current) throw new EasyError('Firebase [emailSignUp]: Firebase 未初始化')
+        const result: UserCredential = await createUserWithEmailAndPassword(authRef.current, email, password);
+        await result.user.reload();
+        await sendEmailVerification(result.user, {
+            url: `${window.location.origin}/`,
+            handleCodeInApp: false,
+        });
+        await signOut(authRef.current);
+        return { user: result.user };
     }
     const _signOut = async () => {
         await signOut(authRef.current!)
@@ -93,7 +101,7 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
         photoURL?: string
     }) => {
         const currentUser = authRef.current!.currentUser
-        if (!currentUser) throw new Error('用户未登录')
+        if (!currentUser) throw new EasyError('Firebase [setUserFirebase]: 用户未登录')
         const obj = {
             email: currentUser.email,
             displayName: userFirebase.displayName || currentUser.displayName || `user-${uid.slice(0, 4)}`,
@@ -103,14 +111,17 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
         await setFirebaseUser(dbRef.current!, uid, obj)
     }
     const _googleSignIn = async () => {
-        const { user, credential } = await googleSignIn(authRef.current!, googleProvider)
+        if (!authRef.current) throw new EasyError('Firebase [googleSignIn]: Firebase 未初始化')
+        const result: UserCredential = await signInWithPopup(authRef.current, googleProvider);
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const user = result.user;
         await authRef.current?.currentUser?.reload()
         await _setUserFirebase(user.uid, {})
         await navigate('/')
         return { user, credential }
     }
     const _emailSignIn = async (email: string, password: string) => {
-        const { user } = await emailSignIn(authRef.current!, email, password)
+        const { user }: UserCredential = await signInWithEmailAndPassword(authRef.current!, email, password);
         await authRef.current?.currentUser?.reload()
         if (authRef.current?.currentUser?.emailVerified !== true) {
             await sendEmailVerification(user);
@@ -128,7 +139,6 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
     useEffect(() => {
         if (!authRef.current || !dbRef.current) return
         console.log('Firebase: Listening to user state changes...')
-        setLoading(true)
         const unsubscribe = onAuthStateChanged(authRef.current, async (u: User | null) => {
             setLoading(true)
             if (u) {

@@ -1,47 +1,5 @@
 import { getDoc, doc, setDoc, updateDoc, Firestore } from 'firebase/firestore/lite';
-import {
-    type Auth,
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    createUserWithEmailAndPassword,
-    GoogleAuthProvider,
-    type UserCredential,
-    setPersistence,
-    browserLocalPersistence,
-    sendEmailVerification,
-    fetchSignInMethodsForEmail,
-    signOut,
-    type UserInfo,
-} from 'firebase/auth';
-
-async function emailSignIn(auth: Auth, email: string, password: string) {
-    const result: UserCredential = await signInWithEmailAndPassword(auth, email, password);
-    await result.user.reload();
-    return { user: result.user };
-}
-
-async function emailSignUp(auth: Auth, email: string, password: string) {
-    const result: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
-    await result.user.reload();
-    await sendEmailVerification(result.user, {
-        url: `${window.location.origin}/`,
-        handleCodeInApp: false,
-    });
-    await signOut(auth);
-    return { user: result.user };
-}
-
-async function googleSignIn(auth: Auth, googleProvider: GoogleAuthProvider) {
-    const result: UserCredential = await signInWithPopup(auth, googleProvider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    return { user: result.user, credential };
-}
-
-export {
-    emailSignIn,    
-    emailSignUp,
-    googleSignIn,
-}
+import { type UserInfo } from 'firebase/auth';
 
 /// ##################### Arweave #########################
 
