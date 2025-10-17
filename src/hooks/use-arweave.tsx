@@ -5,7 +5,6 @@ import { useAppState } from './use-app-state';
 import Arweave from 'arweave/web';
 import Transaction from 'arweave/web/lib/transaction';
 import type { JWKInterface } from 'arweave/web/lib/wallet';
-import api from '../lib/api';
 
 export interface UserArweaveSecret {
     privateKey?: JWKInterface
@@ -24,7 +23,7 @@ interface ArweaveContextType {
     publicThings: UserArweavePublic | null
 
     createTx: (content: string, headers: [string, string][]) => Promise<any>
-    searchTx: (query: string) => Promise<any>
+    searchTx: (query: string) => Promise<Transaction>
     searchByQuery: (tags: Record<string, string>, arweaveAddress?: string) => Promise<any>
     searchByQueryRaw: (tags: Record<string, string>, arweaveAddress?: string) => Promise<SearchByQueryResponse>
 }
@@ -264,9 +263,22 @@ const _searchByQueryRaw = async (arweave: Arweave, tags: Record<string, string>,
 }
 
 
-const _searchTx = async (arweave: Arweave, query: string) => {
-    const res = await arweave.transactions.get(query)
-    return res.toJSON()
+const _searchTx = async (arweave: Arweave, tx_id: string) => {
+    const res = await arweave.transactions.get(tx_id)
+    // 获取明文数据
+    const data = await arweave.transactions.getData(tx_id, { decode: true, string: true })
+    
+    // 解码 tags 为明文
+    const decodedTags = res.tags.map(tag => ({
+        name: arweave.utils.b64UrlToString(tag.name),
+        value: arweave.utils.b64UrlToString(tag.value)
+    }))
+    
+    return {
+        ...res,
+        data: data,
+        tags: decodedTags,
+    } as Transaction
 }
 
 function _parseArweaveKey(key: Record<string, unknown>): JWKInterface | null {
@@ -304,33 +316,3 @@ const _createTx = async (arweave: Arweave, privateKey: JWKInterface, content: st
     return { tx, res }
 }
 
-
-class ArCreateTxSM {
-    private __arweave: Arweave
-    private __privateKey: JWKInterface
-    private __uid: string
-
-    constructor(arweave: Arweave, privateKey: JWKInterface, uid: string) {
-        this.__arweave = arweave
-        this.__privateKey = privateKey
-        this.__uid = uid
-    }
-
-    async __createTx(content: string | File, headers: [string, string][]) {
-        const tx = await this.__arweave.createTransaction({
-            data: typeof content === 'string' ? content : await content.arrayBuffer()
-        }, this.__privateKey)
-        for (const header of headers) {
-            tx.addTag(header[0], header[1])
-        }
-        await this.__arweave.transactions.sign(tx, this.__privateKey)
-        const res = await this.__arweave.transactions.post(tx)
-        return { tx, res }
-    }
-
-    async __createTxAndSaveToDb(content: string | File, headers: [string, string][]) {
-        const { tx, res } = await this.__createTx(content, headers)
-        await api.arTxRecord.create(tx.id, this.__uid, typeof content === 'string' ? 'text/plain' : content.type, headers.toString(), content as File)
-        return { tx, res }
-    }
-}

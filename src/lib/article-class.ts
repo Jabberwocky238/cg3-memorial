@@ -1,4 +1,4 @@
-import type { ArticleDAO } from "@/lib/api"
+import type { ArticleDAO } from "@/lib/api/base"
 import type { Editor, JSONContent } from "@tiptap/react"
 
 export type TagTreeType = Record<string, string[]>
@@ -16,34 +16,48 @@ export class Mutex {
     }
 }
 
-export interface ArticleData {
+export enum StoreStatus {
+    NOT_CACHED = 'none',
+    LOCAL_CACHED = 'local_cached',
+    CHAIN_CACHED = 'up_chain_cached',
+    CHAIN_OUTDATED = 'up_chain_outdated',
+}
+
+export interface ArticleClassProps {
     aid?: string
     title: string
     tags: TagTreeType
-    posterUrl?: string
-    content: JSONContent
+    poster?: string
+    jsonContent: JSONContent
+    htmlContent: string
 }
 
-export class ArticleClass extends Mutex implements ArticleData {
+export class ArticleClass extends Mutex {
+    private _jsonContent: JSONContent = {}
+    private _htmlContent: string = ''
 
     constructor(
         public aid?: string,
         public title: string = 'Untitled',
         public tags: TagTreeType = {},
-        public posterUrl?: string,
-        public content: JSONContent = {},
+        public poster?: string,
+        public storeStatus: StoreStatus = StoreStatus.NOT_CACHED,
     ) {
         super()
     }
 
-    static fromInterface(article: ArticleData): ArticleClass {
-        const articleClass = new ArticleClass()
-        articleClass.aid = article.aid
-        articleClass.title = article.title
-        articleClass.tags = article.tags
-        articleClass.posterUrl = article.posterUrl
-        articleClass.content = article.content
-        return articleClass
+    setContent(editor: Editor) {
+        if (!editor) return
+        this._jsonContent = editor.getJSON()
+        this._htmlContent = editor.getHTML()
+    }
+
+    get htmlContent(): string {
+        return this._htmlContent
+    }
+
+    get jsonContent(): JSONContent {
+        return this._jsonContent
     }
 
     static fromDAO(article: ArticleDAO): ArticleClass {
@@ -51,7 +65,8 @@ export class ArticleClass extends Mutex implements ArticleData {
         articleClass.aid = article.aid
         articleClass.title = article.title
         articleClass.tags = JSON.parse(article.tags) as TagTreeType
-        articleClass.content = JSON.parse(article.content) as JSONContent
+        articleClass._jsonContent = JSON.parse(article.content) as JSONContent
+        articleClass.poster = article.poster
         return articleClass
     }
 

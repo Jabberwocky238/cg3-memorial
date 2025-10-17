@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import api, { type ArticleDAO } from '@/lib/api';
+import { RPC_call, RPC_CALLS, type ArticleDAO, type ArTxRecordDAO } from '@/lib/api/base';
 import { useFirebase } from '@/hooks/use-firebase';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '@/hooks/use-app-state';
@@ -16,14 +16,12 @@ export default function Explore() {
   const navigate = useNavigate();
 
   const loadArticles = async () => {
-    const result = await api.article.list();
-    if (result.error) {
-      throw new Error(result.error);
-    }
-    if (result.data) {
+    const result = await RPC_call('LIST_ARTICLES', {});
+    if (result.ok) {
+      const data = await result.json() as ArticleDAO[];
       // 为每篇文章获取用户信息
       const articlesWithUser = await Promise.all(
-        result.data.map(async (article: ArticleDAO) => {
+        data.map(async (article: ArticleDAO) => {
           try {
             const userInfo = await getUserFirebase(article.uid);
             return {
@@ -76,12 +74,6 @@ interface ArticleItemProps {
 }
 
 function ArticleItem({ article, onClick }: ArticleItemProps) {
-  const firstPicture = useMemo(() => {
-    const doc = JSON.parse(article?.content || '{}') as JSONContent;
-    const contents = doc.content as JSONContent[];
-    const image = contents.find((content) => content.type === 'image');
-    return image?.attrs?.src;
-  }, [article]);
 
   if (!article) {
     return null;
@@ -119,10 +111,10 @@ function ArticleItem({ article, onClick }: ArticleItemProps) {
       </div>
 
       <div className="mb-4 line-clamp-3 flex items-center gap-2">
-        {firstPicture ? (
+        {article.poster ? (
           <>
             <img
-              src={firstPicture}
+              src={article.poster}
               alt="文章封面"
               className="object-cover h-[100px] max-lg:h-[50px]"
             />
@@ -130,7 +122,6 @@ function ArticleItem({ article, onClick }: ArticleItemProps) {
               <h2 className="text-xl font-semibold mb-3 line-clamp-2">
                 {article.title}
               </h2>
-              <pre className="text-sm  truncate">{article.content}</pre>
               <pre className="text-sm truncate">tags:{article.tags}</pre>
             </div>
           </>
@@ -138,7 +129,6 @@ function ArticleItem({ article, onClick }: ArticleItemProps) {
           <h2 className="text-xl font-semibold mb-3 line-clamp-2">
             {article.title}
           </h2>
-          <pre className="text-sm truncate">{article.content}</pre>
           <pre className="text-sm truncate">tags:{article.tags}</pre>
         </div>)}
       </div>

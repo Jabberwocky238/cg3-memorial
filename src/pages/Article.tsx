@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api, { type ArticleDAO } from '@/lib/api';
+import { RPC_call, type ArticleDAO } from '@/lib/api/base';
 import { useFirebase } from '@/hooks/use-firebase';
 import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group';
 import { Button } from '@/components/base/buttons/button';
@@ -16,8 +16,9 @@ import { useArweave } from '@/hooks/use-arweave';
 import { MobilePortal, ModalButton } from '@/components/application/app-navigation/base-components/mobile-header';
 import { CloseIcon } from '@/components/tiptap-icons/close-icon';
 import { ArticleMetaPanel } from '@/components/cg-ui/ArticleMetaPanel';
-import { ArticleClass, type ArticleData } from '@/lib/article-class';
+import { ArticleClass } from '@/lib/article-class';
 import { formatDate } from '@/utils/cg-utils';
+import type Transaction from 'arweave/web/lib/transaction';
 
 const ArticleContext = createContext<{
     article: ArticleDAO
@@ -44,18 +45,12 @@ export default function Article() {
         if (!aid) {
             throw new Error('文章 ID 无效');
         }
-        const result = await api.article.get(aid);
-        if (result.error) {
-            throw new Error('Article: 加载文章失败' + result.error);
-        }
-        if (result.data) {
-            console.log('Article: 文章数据加载成功', result.data);
-            const userInfo = await getUserFirebase(result.data.uid);
-            setAuthor(userInfo);
-            setArticle(result.data);
-        } else {
-            throw new Error('文章不存在');
-        }
+        const result = await RPC_call('GET_ARTICLE', { aid: aid });
+        let article = await result.json() as ArticleDAO;
+        console.log('Article: 文章数据加载成功', article);
+        setArticle(article);
+        const userInfo = await getUserFirebase(article.uid);
+        setAuthor(userInfo as UserInfo);
     };
 
     // 第一个 useEffect: 加载文章内容和用户信息
@@ -74,18 +69,13 @@ export default function Article() {
         }
     }, [aid]);
 
-    const loadEditorContent = async () => {
-        if (!editor || !article) return
-        const content = JSON.parse(article.content);
-        editor.commands.setContent(content);
-    }
-
     // 第二个 useEffect: 监控加载状态，当文章数据和编辑器都准备好时渲染内容
     useEffect(() => {
         if (editor && article) {
             try {
                 LOG_append('Article: 开始渲染编辑器内容');
-                loadEditorContent();
+                if (!editor || !article) return
+                editor.commands.setContent(JSON.parse(article.content));
             } catch (error) {
                 setError('Article: 加载编辑器内容失败' + error);
             } finally {
@@ -121,24 +111,35 @@ export default function Article() {
 
 
 
-function ArticleArweaveInfo({ pageId }: { pageId?: string }) {
-    if (!pageId) return null;
-
-    const { searchByQuery } = useArweave();
-    const [arweaveInfo, setArweaveInfo] = useState<any>(null);
+function ArticleArweaveInfo({ article }: { article: ArticleDAO }) {
+    if (!article) return null;
+    const { searchTx } = useArweave();
+    const [arweaveInfo, setArweaveInfo] = useState<Transaction | null>(null);
 
     useEffect(() => {
         const loadArweaveInfo = async () => {
-            const res = await searchByQuery({ 'Page-Id': pageId });
-            console.log('Article: 文章数据和用户信息加载完成', res);
-            setArweaveInfo(res);
+            const chainInfo = JSON.parse(article.chain) as Record<string, string>;
+            const res = await searchTx(chainInfo.tx_id);
+            console.log('Article: ArticleArweaveInfo', res);
+            setArweaveInfo(res as Transaction);
         };
         loadArweaveInfo();
-    }, [searchByQuery]);
+    }, [article.chain]);
 
     return (
-        <div>
-            <p>Article Arweave Info</p>
+        <div className="text-xs">
+            <p >Arweave Transaction Info</p>
+            <div>   
+                <p className="text-sm w-full rounded break-words whitespace-pre-wrap">Tx ID: {arweaveInfo?.id}</p>
+                <div>
+                    {arweaveInfo?.tags.map((tag) => (
+                        <p key={tag.name}>{tag.name}: {tag.value}</p>
+                    ))}
+                </div>
+            </div>
+            {/* <pre className="p-4 rounded break-words whitespace-pre-wrap overflow-auto">
+                {JSON.stringify(arweaveInfo, null, 2)}
+            </pre> */}
         </div>
     );
 }
@@ -231,8 +232,8 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
     }
 
     return (
-        <div className={`h-full w-full p-4 space-y-4 ${className}`}>
-            <ArticleArweaveInfo pageId={article?.aid} />
+        <div className={`h-full w-full p-4 space-y-4 ${className} overflow-auto`}>
+            <ArticleArweaveInfo article={article} />
             <AvatarLabelGroup
                 size="md"
                 src={author?.photoURL}
@@ -248,7 +249,7 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
                     </span>
                 )}
             </p>
-            {articleMeta && <ArticleMetaPanel article={articleMeta} />}
+            {articleMeta && <ArticleMetaPanel {...articleMeta} />}
 
             <div className="grid max-lg:grid-cols-2 lg:grid-cols-1 gap-2 ">
                 <ModalButton

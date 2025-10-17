@@ -1,8 +1,7 @@
-import { useEffect, useState, useRef, type RefObject, useContext } from 'react'
+import { useEffect, useState, useRef, type RefObject, useContext, useMemo } from 'react'
 import type { Key } from '@react-types/shared'
 import { useParams } from 'react-router-dom'
 import { useFirebase } from '@/hooks/use-firebase'
-import api from '@/lib/api'
 import { useArweave } from '@/hooks/use-arweave'
 import { useTheme } from '@/hooks/use-theme'
 import { Archive, ArrowBlockUp, ArrowBlockDown, Edit03, Trash01, CheckCircle, XClose } from "@untitledui/icons";
@@ -23,9 +22,10 @@ import { Tag, TagGroup, type TagItem, TagList } from "@/components/base/tags/tag
 import { Input } from "@/components/base/input/input";
 import { Select, type SelectItemType } from "@/components/base/select/select";
 import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/button-group'
-import { ArticleMetaPanel, type ArticleMetaPanelProps } from '@/components/cg-ui/ArticleMetaPanel'
-import { type ArticleData, ArticleClass, type TagTreeType } from '@/lib/article-class'
+import { ArticleMetaPanel } from '@/components/cg-ui/ArticleMetaPanel'
+import { ArticleClass, StoreStatus, type ArticleClassProps, type TagTreeType } from '@/lib/article-class'
 import { createContext } from 'react'
+import { RPC_call, type ArticleDAO } from '@/lib/api/base'
 
 const EditContext = createContext<{
   articleRef: RefObject<ArticleClass>
@@ -58,27 +58,20 @@ function EditPage() {
 
   const tryLoadArticle = async (aid: string) => {
     console.log('Edit: 开始加载文章', aid)
-    const result = await api.article.get(aid)
-    if (result.data) {
-      const isBelongToUser = result.data.uid === userFirebase?.uid
-      console.log('Edit: 文章数据加载成功', result.data)
-      articleRef.current.lock()
-      articleRef.current.aid = result.data.aid
-      articleRef.current.title = result.data.title
-      articleRef.current.tags = JSON.parse(result.data.tags)
-      articleRef.current.content = JSON.parse(result.data.content)
-      articleRef.current.unlock()
-      return { isBelongToUser }
-    }
-    return { isBelongToUser: false }
+    const response = await RPC_call('GET_ARTICLE', { aid: aid })
+    const article = await response.json() as ArticleDAO;
+    articleRef.current.lock()
+    articleRef.current = ArticleClass.fromDAO(article as ArticleDAO)
+    articleRef.current.unlock()
+    return { isBelongToUser: article.uid === userFirebase?.uid }
   }
 
   useEffect(() => {
     if (!editor) return
     if (!articleRef.current) return
     if (articleRef.current.isLocked) return
-    editor.commands.setContent(articleRef.current.content)
-  }, [editor, articleRef.current?.isLocked, articleRef.current?.content])
+    editor.commands.setContent(articleRef.current.jsonContent)
+  }, [editor, articleRef.current?.isLocked, articleRef.current?.jsonContent])
 
   useEffect(() => {
     if (!aid) { // 如果文章 ID 为空，则认为创建新文章
@@ -87,7 +80,7 @@ function EditPage() {
       articleRef.current.aid = ''
       articleRef.current.title = ''
       articleRef.current.tags = {}
-      articleRef.current.content = {}
+      articleRef.current.setContent(editor as Editor)
       articleRef.current.unlock()
       return
     }
@@ -209,28 +202,55 @@ function ControlPanelContainer(props: ControlPanelProps) {
 
 function ControlPanel({ className, editor }: ControlPanelProps) {
   const { articleRef } = useEditContext()
-  const { createTx } = useArweave()
-  const { theme } = useTheme()
-  const [isDirty, setIsDirty] = useState(false)
+  const [tick, setTick] = useState<number>(0)
+  const memoArticle = useMemo(() => {
+    const article = {
+      title: articleRef.current?.title ?? 'Untitled',
+      aid: articleRef.current?.aid ?? undefined,
+      tags: articleRef.current?.tags ?? {},
+      poster: articleRef.current?.poster ?? undefined,
+      contentLength: articleRef.current?.htmlContent.length ?? 0,
+    }
+    console.log('Edit: memoArticle', article)
+    return article
+  }, [tick])
+
+  const updateMeta = (editor: Editor | null) => {
+    if (!editor) return
+    // 找到第一个type: heading, attr: level: 1, 的text
+    const heading = editor.state.doc.content.content.find((node) => {
+      const type = node.type
+      const attrs = node.attrs
+      return type.name === 'heading' && attrs.level === 1
+    })
+    if (!heading) {
+      articleRef.current.title = 'Untitled'
+      console.log('Edit: 未找到标题', articleRef.current.title)
+    } else {
+      articleRef.current.title = heading?.content.content[0].text ?? 'Untitled'
+      console.log('Edit: 找到标题', articleRef.current.title)
+    }
+
+    const poster = editor.state.doc.content.content.find((node) => {
+      const type = node.type
+      const attrs = node.attrs
+      return type.name === 'image' && attrs.src
+    })
+    if (!poster) {
+      articleRef.current.poster = undefined
+      console.log('Edit: 未找到封面', articleRef.current.poster)
+    } else {
+      articleRef.current.poster = poster.attrs['src']
+      console.log('Edit: 找到封面', articleRef.current.poster)
+    }
+    setTick(prev => prev + 1)
+  }
   // 监听编辑器内容变化，更新标题
   useEffect(() => {
     if (!editor) return
     console.log('Edit: 监听编辑器内容变化')
     const timer = setInterval(() => {
-      // 找到第一个type: heading, attr: level: 1, 的text
-      const heading = editor.state.doc.content.content.find((node) => {
-        const type = node.type
-        const attrs = node.attrs
-        return type.name === 'heading' && attrs.level === 1
-      })
-      if (!heading) {
-        articleRef.current.title = 'Untitled'
-        console.log('Edit: 未找到标题', articleRef.current.title)
-        return
-      }
-      articleRef.current.title = heading?.content.content[0].text ?? 'Untitled'
-      console.log('Edit: 找到标题', articleRef.current.title)
-      setIsDirty(true)
+      updateMeta(editor)
     }, 1000)
     return () => clearInterval(timer)
   }, [editor])
@@ -249,40 +269,10 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
   const handleLogHTML = () => {
     console.log(editor?.getHTML())
   }
-  // 处理上链
-  const [isUpchaining, setIsUpchaining] = useState(false)
-  const handleUpchain = async () => {
-    if (!editor) return
-
-    const html = editor.getHTML()
-    if (!html) {
-      console.error('Upchain: 编辑器内容为空')
-      alert('编辑器内容为空，无法上链')
-      return
-    }
-
-    setIsUpchaining(true)
-    try {
-      const template = templateMake(html, articleRef.current.title, theme === 'dark')
-      const { tx, res } = await createTx(template, [
-        ['Content-Type', 'text/html'],
-        ['Title', articleRef.current.title],
-        ['Type', 'file'],
-        ['User-Agent', 'Permane-Inc'],
-      ])
-      console.log('Upchain: 交易创建成功', tx, res, template)
-      alert("文章已上链: https://arweave.net/" + tx.id)
-    } catch (error) {
-      console.error('Upchain: 交易创建失败', error)
-      alert('上链失败: ' + error)
-    } finally {
-      setIsUpchaining(false)
-    }
-  }
 
   return (
     <div className={`h-full w-full p-4 space-y-4 ${className}`}>
-      <ArticleMetaPanel article={articleRef.current} />
+      <ArticleMetaPanel {...memoArticle} />
 
       <div className="grid max-lg:grid-cols-2 lg:grid-cols-1 gap-2 ">
         <Button
@@ -327,7 +317,6 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
             getTags={() => articleRef.current.tags}
             setTags={(tags) => {
               articleRef.current.tags = tags;
-              setIsDirty(true)
             }}
           />}
         </ModalButton>
@@ -337,14 +326,8 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
           iconLeading={CheckCircle}
           color="secondary" size="sm"
         >
-          {(close) => <ArticleMetaEditPanel close={close} article={articleRef.current} setIsDirty={setIsDirty} />}
+          {(close) => <ArticleMetaEditPanel close={close} editor={editor} />}
         </ModalButton>
-        <Button
-          isLoading={isUpchaining} showTextWhileLoading iconLeading={Archive}
-          color="secondary" size="sm" onClick={handleUpchain}
-        >
-          Upchain
-        </Button>
       </div>
     </div>
   )
@@ -484,39 +467,74 @@ function TagsPanel({ close, getTags, setTags }: TagsPanelProps) {
 }
 
 
-interface ArticleMetaEditPanelProps extends ArticleMetaPanelProps {
-  close: () => void
-  setIsDirty: (isDirty: boolean) => void
-}
-
-export function ArticleMetaEditPanel({ article, isDirty, setIsDirty, close }: ArticleMetaEditPanelProps) {
+export function ArticleMetaEditPanel({ editor, close }: { editor: Editor | null, close: () => void }) {
   const [started, setStarted] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const { userFirebase } = useFirebase()
+  const { createTx } = useArweave()
+  const { articleRef } = useEditContext()
+  const article = articleRef.current
+  const { theme } = useTheme()
+
   const handlePublish = async () => {
     if (!userFirebase?.uid) return
     setStarted(true)
     setIsPublishing(true)
+    article.lock()
+    article.setContent(editor as Editor)
     try {
-      const json = article.content as JSONContent
-      if (article.aid) {
-        await api.article.update(article.aid, article.title, JSON.stringify(json), JSON.stringify(article.tags))
-      } else {
-        await api.article.create(userFirebase?.uid, article.title, JSON.stringify(json), JSON.stringify(article.tags))
+      const template = templateMake(article.htmlContent, article.title, theme === 'dark')
+      const { tx, res } = await createTx(template, [
+        ['Content-Type', 'text/html'],
+        ['Title', article.title],
+        ['Type', 'file'],
+        ['User-Agent', 'Permane-Inc'],
+      ])
+      const result1 = await RPC_call('REPORT_UPCHAIN_TX', {
+        tx_id: tx.id,
+        uid: userFirebase?.uid as string,
+        content: new Blob([template], { type: 'text/html' }),
+        content_type: 'text/html',
+        headers: JSON.stringify({}),
+        msg_type: 'article_update',
+      })
+      console.log('Report upchain tx success', result1)
+      let articleData = {
+        title: article.title,
+        tags: JSON.stringify(article.tags),
+        content: JSON.stringify(article.jsonContent),
+        poster: article.poster ?? '',
+        chain: JSON.stringify({ tx_id: tx.id, chain_type: 'arweave' }),
+        uid: userFirebase?.uid as string,
       }
+      if (article.aid) {
+        articleData = { ...articleData, ...{ 'aid': article.aid as string } }
+      }
+      const result = await RPC_call('UPDATE_ARTICLE', {
+        article: JSON.stringify(articleData),
+      })
+      const { aid } = await result.json()
+      article.aid = aid
       console.log('文章发布成功')
     } catch (error) {
       console.error('发布文章失败:', error)
       throw error
     } finally {
       setIsPublishing(false)
+      article.unlock()
     }
   }
   return (
     <div className="space-y-4">
-      <ArticleMetaPanel article={article} isDirty={isDirty} />
+      <ArticleMetaPanel
+        title={article.title}
+        aid={article.aid}
+        tags={article.tags}
+        poster={article.poster}
+        contentLength={article.htmlContent.length}
+      />
       <div className="flex items-center gap-2">
-        status: <p className={`text-sm ${!started ? 'text-gray-500' : isPublishing ? 'text-yellow-500' : 'text-green-500'}`} >
+        status: <p className={`text-sm ${!started ? 'text-gray-500' : isPublishing ? 'text-yellow-500' : 'text-green-500'}`} onClick={handlePublish}  >
           {!started ? 'Ready' : isPublishing ? 'Publishing...' : 'Published'}
         </p>
       </div>
@@ -532,7 +550,6 @@ export function ArticleMetaEditPanel({ article, isDirty, setIsDirty, close }: Ar
                   console.error('发布文章失败:', error)
                   throw error
                 } finally {
-                  setIsDirty(false)
                   close?.()
                 }
               },
