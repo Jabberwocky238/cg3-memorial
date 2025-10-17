@@ -24,7 +24,7 @@ import { Button as AriaButton } from 'react-aria-components'
 import { CashierProvider } from './hooks/use-cashier'
 
 const navItems = [
-	{ label: 'Home', href: '/' },
+	// { label: 'Home', href: '/' },
 	{ label: 'Explore', href: '/explore' },
 	{ label: 'Profile', href: '/profile' },
 ]
@@ -94,7 +94,7 @@ const HeaderNavigation = memo(() => {
 									key={item.label}
 									type="link"
 									// href={item.href}
-									href="#" // 防止点击事件引起页面整体刷新
+									href="" // 防止点击事件引起页面整体刷新
 									onClick={() => {
 										navigate(item.href)
 										state.close()

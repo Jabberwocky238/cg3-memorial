@@ -91,3 +91,46 @@ export async function listArticles(env: Env): Promise<Article[]> {
     ).all<Article>()
     return results ?? []
 }
+
+
+export type Topic = {
+    id: number;
+    topic: string;
+    aid: string;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export async function updateArticleTopics(env: Env, topics: string[], aid: string): Promise<void> {
+    await env.DB.prepare(
+        `DELETE FROM topics WHERE aid = ?`
+    ).bind(aid).run()
+    const topicBatch = []
+    for (const topic of topics) {
+        const statement = env.DB.prepare(
+            `INSERT INTO topics (topic, aid) VALUES (?, ?)`
+        ).bind(topic, aid)
+        topicBatch.push(statement)
+    }
+    await env.DB.batch(topicBatch)
+}
+
+export async function searchTopics(env: Env, topic: string): Promise<{ topic: string; aid: string }[]> {
+    const { results } = await env.DB.prepare(
+        `SELECT topic, aid FROM topics WHERE topic LIKE ?`
+    ).bind(`%${topic}%`).all<{ topic: string; aid: string }>()
+    return results ?? []
+}
+
+export async function rankTopicsTopKArticles(env: Env, topic: string, topK: number): Promise<{ aid: string }[]> {
+    if (topic == '') {
+        const { results } = await env.DB.prepare(
+            `SELECT a.aid, a.uid, a.title, a.poster, a.content, a.created_at, a.updated_at, a.chain, a.tags FROM articles AS a JOIN topics as t ON a.aid = t.aid ORDER BY a.created_at DESC LIMIT ? `
+        ).bind(topK).all<{ aid: string }>()
+        return results ?? []
+    }
+    const { results } = await env.DB.prepare(
+        `SELECT a.aid, a.uid, a.title, a.poster, a.content, a.created_at, a.updated_at, a.chain, a.tags FROM articles AS a JOIN topics as t ON a.aid = t.aid WHERE t.topic = ? ORDER BY a.created_at DESC LIMIT ?`
+    ).bind(topic, topK).all<{ aid: string }>()
+    return results ?? []
+}

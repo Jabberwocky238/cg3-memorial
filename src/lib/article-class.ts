@@ -16,13 +16,6 @@ export class Mutex {
     }
 }
 
-export enum StoreStatus {
-    NOT_CACHED = 'none',
-    LOCAL_CACHED = 'local_cached',
-    CHAIN_CACHED = 'up_chain_cached',
-    CHAIN_OUTDATED = 'up_chain_outdated',
-}
-
 export interface ArticleClassProps {
     aid?: string
     title: string
@@ -41,7 +34,6 @@ export class ArticleClass extends Mutex {
         public title: string = 'Untitled',
         public tags: TagTreeType = {},
         public poster?: string,
-        public storeStatus: StoreStatus = StoreStatus.NOT_CACHED,
     ) {
         super()
     }

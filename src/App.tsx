@@ -1,4 +1,4 @@
-import { Route, Routes, BrowserRouter } from 'react-router-dom'
+import { Route, Routes, BrowserRouter, Navigate } from 'react-router-dom'
 
 import { ThemeProvider } from './hooks/use-theme'
 import { lazy } from 'react'
@@ -25,7 +25,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path='/' index element={<HomePage />} />
+        <Route path='/' index element={<Navigate to="/explore" />} />
         <Route path='/explore' element={<ExplorePage />} />
         <Route path='/profile' element={<ProfilePage />} />
         <Route path='/edit' element={<EditPage />} />

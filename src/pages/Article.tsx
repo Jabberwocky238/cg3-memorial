@@ -113,11 +113,14 @@ export default function Article() {
 
 function ArticleArweaveInfo({ article }: { article: ArticleDAO }) {
     if (!article) return null;
+    if (article.chain === '{}') return null;
+    
     const { searchTx } = useArweave();
     const [arweaveInfo, setArweaveInfo] = useState<Transaction | null>(null);
 
     useEffect(() => {
         const loadArweaveInfo = async () => {
+            
             const chainInfo = JSON.parse(article.chain) as Record<string, string>;
             const res = await searchTx(chainInfo.tx_id);
             console.log('Article: ArticleArweaveInfo', res);

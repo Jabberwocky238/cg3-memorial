@@ -1,4 +1,4 @@
-import { createArTxRecord, getArticle, getArTxRecord, listArticles, listArTxRecordsByMsgType, updateArticle, type Article } from "./db/table-ar_tx_record";
+import { createArTxRecord, getArticle, getArTxRecord, listArticles, listArTxRecordsByMsgType, rankTopicsTopKArticles, searchTopics, updateArticle, updateArticleTopics, type Article } from "./db/table-ar_tx_record";
 
 
 async function handleHelloWorld(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
@@ -35,6 +35,10 @@ const KEY_RPC_TYPES = [
   'UPDATE_ARTICLE',
   'GET_ARTICLE',
   'LIST_ARTICLES',
+
+  'UPDATE_ARTICLE_TOPICS',
+  'SEARCH_TOPICS',
+  'RANK_TOPICS_TOPK',
 ] as const;
 
 function validateRPCParams(...params: (any | null)[]): boolean {
@@ -105,6 +109,34 @@ async function handleRPC(request: Request, env: Env, context: ExecutionContext):
     }
     case 'LIST_ARTICLES': {
       const res = await listArticles(env);
+      return JSON.stringify(res);
+    }
+    case 'UPDATE_ARTICLE_TOPICS': {
+      const _topics = body.get('topics') as string;
+      const aid = body.get('aid') as string;
+      if (!validateRPCParams(_topics, aid)) {
+        throw new Error("Invalid RPC Params UPDATE_ARTICLE_TOPICS");
+      }
+      const topics = JSON.parse(_topics) as string[];
+      const res = await updateArticleTopics(env, topics, aid);
+      return JSON.stringify(res);
+    }
+    case 'SEARCH_TOPICS': {
+      const topic = body.get('topic') as string;
+      if (!validateRPCParams(topic)) {
+        throw new Error("Invalid RPC Params SEARCH_TOPICS");
+      }
+      const res = await searchTopics(env, topic);
+      return JSON.stringify(res);
+    }
+    case 'RANK_TOPICS_TOPK': {
+      const topic = body.get('topic') as string;
+      const _topK = body.get('top_k') as string;
+      if (!validateRPCParams(topic, _topK)) {
+        throw new Error("Invalid RPC Params RANK_TOPICS_TOPK");
+      }
+      const topK = parseInt(_topK);
+      const res = await rankTopicsTopKArticles(env, topic, topK);
       return JSON.stringify(res);
     }
     default: {

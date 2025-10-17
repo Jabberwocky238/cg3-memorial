@@ -23,9 +23,10 @@ import { Input } from "@/components/base/input/input";
 import { Select, type SelectItemType } from "@/components/base/select/select";
 import { ButtonGroup, ButtonGroupItem } from '@/components/base/button-group/button-group'
 import { ArticleMetaPanel } from '@/components/cg-ui/ArticleMetaPanel'
-import { ArticleClass, StoreStatus, type ArticleClassProps, type TagTreeType } from '@/lib/article-class'
+import { ArticleClass, type TagTreeType } from '@/lib/article-class'
 import { createContext } from 'react'
 import { RPC_call, type ArticleDAO } from '@/lib/api/base'
+import { Toggle } from '@/components/base/toggle/toggle'
 
 const EditContext = createContext<{
   articleRef: RefObject<ArticleClass>
@@ -211,7 +212,7 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
       poster: articleRef.current?.poster ?? undefined,
       contentLength: articleRef.current?.htmlContent.length ?? 0,
     }
-    console.log('Edit: memoArticle', article)
+    // console.log('Edit: memoArticle', article)
     return article
   }, [tick])
 
@@ -225,10 +226,10 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
     })
     if (!heading) {
       articleRef.current.title = 'Untitled'
-      console.log('Edit: 未找到标题', articleRef.current.title)
+      // console.log('Edit: 未找到标题', articleRef.current.title)
     } else {
       articleRef.current.title = heading?.content.content[0].text ?? 'Untitled'
-      console.log('Edit: 找到标题', articleRef.current.title)
+      // console.log('Edit: 找到标题', articleRef.current.title)
     }
 
     const poster = editor.state.doc.content.content.find((node) => {
@@ -238,10 +239,10 @@ function ControlPanel({ className, editor }: ControlPanelProps) {
     })
     if (!poster) {
       articleRef.current.poster = undefined
-      console.log('Edit: 未找到封面', articleRef.current.poster)
+      // console.log('Edit: 未找到封面', articleRef.current.poster)
     } else {
       articleRef.current.poster = poster.attrs['src']
-      console.log('Edit: 找到封面', articleRef.current.poster)
+      // console.log('Edit: 找到封面', articleRef.current.poster)
     }
     setTick(prev => prev + 1)
   }
@@ -474,6 +475,7 @@ export function ArticleMetaEditPanel({ editor, close }: { editor: Editor | null,
   const { createTx } = useArweave()
   const { articleRef } = useEditContext()
   const article = articleRef.current
+  const [willUploadToArweave, setWillUploadToArweave] = useState<boolean>(false)
   const { theme } = useTheme()
 
   const handlePublish = async () => {
@@ -483,32 +485,43 @@ export function ArticleMetaEditPanel({ editor, close }: { editor: Editor | null,
     article.lock()
     article.setContent(editor as Editor)
     try {
-      const template = templateMake(article.htmlContent, article.title, theme === 'dark')
-      const { tx, res } = await createTx(template, [
-        ['Content-Type', 'text/html'],
-        ['Title', article.title],
-        ['Type', 'file'],
-        ['User-Agent', 'Permane-Inc'],
-      ])
-      const result1 = await RPC_call('REPORT_UPCHAIN_TX', {
-        tx_id: tx.id,
-        uid: userFirebase?.uid as string,
-        content: new Blob([template], { type: 'text/html' }),
-        content_type: 'text/html',
-        headers: JSON.stringify({}),
-        msg_type: 'article_update',
-      })
-      console.log('Report upchain tx success', result1)
+      let tx_id = ''
+      if (JSON.stringify(article.jsonContent).length <= 1000) {
+        throw new Error('Edit: 文章内容太短，无法发布')
+      }
+      if (willUploadToArweave) {
+        const template = templateMake(article.htmlContent, article.title, theme === 'dark')
+        const { tx, res } = await createTx(template, [
+          ['Content-Type', 'text/html'],
+          ['Title', article.title],
+          ['Type', 'file'],
+          ['User-Agent', 'Permane-Inc'],
+        ])
+        tx_id = tx.id
+        const result1 = await RPC_call('REPORT_UPCHAIN_TX', {
+          tx_id: tx.id,
+          uid: userFirebase?.uid as string,
+          content: new Blob([template], { type: 'text/html' }),
+          content_type: 'text/html',
+          headers: JSON.stringify({}),
+          msg_type: 'article_update',
+        })
+        console.log('Report upchain tx success', result1)
+      }     
       let articleData = {
         title: article.title,
         tags: JSON.stringify(article.tags),
         content: JSON.stringify(article.jsonContent),
         poster: article.poster ?? '',
-        chain: JSON.stringify({ tx_id: tx.id, chain_type: 'arweave' }),
         uid: userFirebase?.uid as string,
       }
       if (article.aid) {
         articleData = { ...articleData, ...{ 'aid': article.aid as string } }
+      }
+      if (willUploadToArweave) {
+        articleData = { ...articleData, ...{ 'chain': JSON.stringify({ tx_id: tx_id, chain_type: 'arweave' }) } }
+      } else {
+        articleData = { ...articleData, ...{ 'chain': '{}' } }
       }
       const result = await RPC_call('UPDATE_ARTICLE', {
         article: JSON.stringify(articleData),
@@ -533,6 +546,7 @@ export function ArticleMetaEditPanel({ editor, close }: { editor: Editor | null,
         poster={article.poster}
         contentLength={article.htmlContent.length}
       />
+      <Toggle label="Upload to Arweave ?" hint={willUploadToArweave ? 'will cost some ARs' : 'not Upload'} size="sm" value={willUploadToArweave.toString()} onChange={(e) => setWillUploadToArweave(e)} />
       <div className="flex items-center gap-2">
         status: <p className={`text-sm ${!started ? 'text-gray-500' : isPublishing ? 'text-yellow-500' : 'text-green-500'}`} onClick={handlePublish}  >
           {!started ? 'Ready' : isPublishing ? 'Publishing...' : 'Published'}
@@ -547,7 +561,6 @@ export function ArticleMetaEditPanel({ editor, close }: { editor: Editor | null,
                 try {
                   await handlePublish()
                 } catch (error) {
-                  console.error('发布文章失败:', error)
                   throw error
                 } finally {
                   close?.()

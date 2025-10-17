@@ -60,7 +60,11 @@ export const RPC_CALLS = [
     'UPDATE_ARTICLE',
     'GET_ARTICLE',
     'LIST_ARTICLES',
-]
+
+    'UPDATE_ARTICLE_TOPICS',
+    'SEARCH_TOPICS',
+    'RANK_TOPICS_TOPK',
+] as const;
 
 export async function RPC_call(rpcType: (typeof RPC_CALLS)[number], params: Record<string, string | Blob>): Promise<Response> {
     const formData = new FormData();
