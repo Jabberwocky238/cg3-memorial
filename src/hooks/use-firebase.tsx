@@ -140,18 +140,24 @@ export default function FirebaseProvider({ children }: { children: React.ReactNo
         if (!authRef.current || !dbRef.current) return
         console.log('Firebase: Listening to user state changes...')
         const unsubscribe = onAuthStateChanged(authRef.current, async (u: User | null) => {
-            setLoading(true)
-            if (u) {
-                if (u.emailVerified !== true) {
-                    await navigate('/auth#login')
-                    return
+            try {
+                setLoading(true)
+                if (u) {
+                    if (u.emailVerified !== true) {
+                        await navigate('/auth#login')
+                        return
+                    }
+                    await _setUserFirebase(u.uid, {})
+                    setUserFirebaseReactive(u)
+                } else {
+                    setUserFirebaseReactive(null)
                 }
-                await _setUserFirebase(u.uid, {})
-                setUserFirebaseReactive(u)
-            } else {
-                setUserFirebaseReactive(null)
+                setLoading(false)
+            } catch (error) {
+                throw new EasyError('Firebase: 监听用户状态变化失败: ', error)
+            } finally {
+                setLoading(false)
             }
-            setLoading(false)
         })
         return unsubscribe
     }, [authRef.current, dbRef.current])
